@@ -21,6 +21,24 @@ Serial myPort;        // The serial port
 float inByte = 0;
 float lastByte = 0;
 
+//self initialized variables
+String x_pos_str;
+float x_pos_f;
+float x_pos;
+String y_pos_str;
+float y_pos_f;
+float y_pos;
+//parameters for graphics
+float x_min = 0.01;
+float x_max = 0.04;
+float y_min = -0.02;
+float y_max = 0.02;
+float x_map_min = 0;
+float x_map_max = 200;
+float y_map_min = 0;
+float y_map_max = 200;
+
+
 void setup () {
   // set the window size:
   size(600, 400);        
@@ -30,7 +48,7 @@ void setup () {
   // Check the listed serial ports in your machine
   // and use the correct index number in Serial.list()[].
 
-  myPort = new Serial(this, Serial.list()[9], 115200);  //make sure baud rate matches Arduino
+  myPort = new Serial(this, Serial.list()[9], 38400);  //make sure baud rate matches Arduino
 
   // A serialEvent() is generated when a newline character is received :
   myPort.bufferUntil('\n');
@@ -53,14 +71,25 @@ void draw () {
 }
 
 void serialEvent (Serial myPort) {
-  // get the ASCII string:
-
-  // read the input string
-  // HINT: use myPort.readStringUntil() with the appropriate argument
-  // trim and convert string to a number
-  // if: the number is NaN, set current value to previous value
-  // otherwise: map the new value to the screen width
-  //           & update previous value variable
+  // read the input string as String
+  x_pos_str = myPort.readStringUntil('\t');
+  // convert to float
+  x_pos_f = float(x_pos_str);
+  // check if value is valid and update position
+  if (x_pos != Float.NaN){
+    x_pos = map(x_pos_f, x_min, x_max, x_map_min, x_map_max);
+  }
+  else {
+    x_pos = 0.5;
+  }
   
-  //STOP EDITING HERE
+  // repeat for second part of the input string
+  y_pos_str = myPort.readStringUntil('\n');
+  y_pos_f = float(y_pos_str);
+  if (y_pos_f != Float.NaN){
+    y_pos = map(y_pos_f, y_min, y_max, y_map_min, y_map_max);
+  }
+  else {
+    y_pos = 0.5;
+  }
 }
