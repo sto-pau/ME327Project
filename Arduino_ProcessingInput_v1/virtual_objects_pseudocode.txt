@@ -1,0 +1,46 @@
+//workspace setup
+    length = usable work length
+    points = number of points to be used
+    lengthBetween = length / (points - 1) //distance between points
+    startingDepth = y position of clay block when starting
+
+//mass spring dampners system 
+    float ymass[points] = {startingDepth}; //based on x & y axis of pantograph
+    float xmass[points] = {0}; //based on x & y axis of pantograph
+    use for loop to fill array with points distance lengthBetween
+    float velMass[points] = {0};
+    float accMass[points] = {0};
+    float velMassPrev[points] =  {0};
+    float accMassPrev[points] =  {0};
+
+//calculated user x,y
+    yUser = y;
+    xUser = x;
+    
+    vxUser = x;
+
+//find which two points will be affected
+    //array containing difference between user position and all clay positions
+    xdiffUserMass = xUser - xMass //create a function to do this for all elements
+
+    //choose the clay element to interact with as
+    the element with minimum xdiffUserMass //function that gets minimum value
+
+    //find 2nd element depending on if  xUser  > or < xMass
+
+//find penetration distance 
+    //calculate line equation
+        //ax + by + c = 0
+            //a = y1 - y2
+            //b = x2 - x1
+            //c = (x1 - x2) * y1 + (y2 - y1) * x1
+    //calculate normal distance
+        //d = abs ( a * xuser + b * yuser + c) / sqrt( a^2 + b^2 )
+
+//calculate user applied force
+    //FUserx1 = k * d * abs( xUser - x1 ) / lengthBetween) ) + b * vXUser * abs( xUser - x1 ) / lengthBetween) )
+    //FUserx1 = k * d * abs( xUser - x2 ) / lengthBetween) ) + b * vXUser * abs( xUser - x1 ) / lengthBetween) )
+
+
+
+
