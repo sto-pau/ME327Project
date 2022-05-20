@@ -17,7 +17,12 @@
     yUser = y;
     xUser = x;
     
-    vxUser = x;
+    //velocityY calculation for user
+	// Calculate filtered velocity with loop time estimation
+	dyUser = (double)(yUser - yUser_prev) / 0.001;
+
+	// Calculate the filtered velocity of the handle using an infinite impulse response filter
+	dyUser_filt = .9*dyUser + 0.1*dyUser_prev; 
 
 //find which two points will be affected
     //array containing difference between user position and all clay positions

@@ -2,47 +2,47 @@
 // Code to start Processing Code input setup
 //--------------------------------------------------------------------------
 // Parameters that define what environment to render
-#define ENABLE_MASS_SPRING_DAMP
+//#define ENABLE_MASS_SPRING_DAMP 
 
 // Includes
 #include <math.h>
 
+
+//constants here
+float unitsDivisor = 1000.0; 
+
+//workspace setup
+const float lengthWorkspace = 198.0 / unitsDivisor; //usable work length
+const int points = 10; //number of points to be used (needs to be constant to initialize arrays)
+const float lengthBetween = lengthWorkspace / (points - 2); //distance between points
+const float startingDepth = 125 / unitsDivisor; //thickness of clay block when starting
+
+//function prototypes here (not needed for arduino?)
+//float xmass[points] InitializeXmass(float xmass[points]);
+
 // Kinematics variables
-double xh = 0;           // position of the handle [m]
-double theta_s = 0;      // Angle of the sector pulley in deg
-double xh_prev;          // Distance of the handle at previous time step
-double xh_prev2;
-double dxh;              // Velocity of the handle
-double dxh_prev;
-double dxh_prev2;
-double dxh_filt;         // Filtered velocity of the handle
-double dxh_filt_prev;
-double dxh_filt_prev2;
+float yUser = 0;
+float xUser = 0;
+float dyUser = 0;
 
 // Force output variables
 double force = 0;           // force at the handle
 double Tp = 0;              // torque of the motor pulley
-double duty = 0;            // duty cylce (between 0 and 255)
-unsigned int output = 0;    // output command to the motor
 
-//mass spring dampner
-float xmass = 0.5 / 100; 
-float velMass = 0.0;
-float accMass = 0.0;
-float velMassPrev = 0.0;
-float accMassPrev = 0.0;
-
-float xwall = 45.0 / 1000; 
-
-float userForce = 0.0;
-float springForce = 0.0;
-float springEqX = 0.5 / 100.0;
-float dampForce = 0.0;
-
-float mass = 2.0;
-float b = 3;
-float k = 300.0;
-float kUser = 1000.0;
+//mass spring dampners system 
+  //position variables
+  float ymass[points] = {0}; //based on x & y axis of pantograph
+  float xmass[points] = {0}; //based on x & y axis of pantograph
+    //use for loop to fill array with points distance lengthBetween IN MAIN     
+    
+  //change in position variables
+  float velMass[points] = {0};
+  float accMass[points] = {0};
+  float velMassPrev[points] =  {0};
+  float accMassPrev[points] =  {0};
+  //force calculation variables
+  float userForceX = 0.0;
+  float userForceY = 0.0;
 
 int mSStart = 0;
 
@@ -51,6 +51,15 @@ int mSStart = 0;
 // --------------------------------------------------------------
 void setup() 
 {
+  
+  InitializeYmass(&ymass[0],startingDepth);
+  InitializeXmass(&xmass[0], points);
+  
+  Serial.begin(9600);
+  
+  PrintArray(ymass, points);
+  Serial.println("now xmass");
+  PrintArray(xmass, points);
 
 }
 
@@ -59,18 +68,39 @@ void setup()
 // --------------------------------------------------------------
 void loop()
 {
+  
   //*************************************************************
   //******************* Rendering Algorithms ********************
   //*************************************************************
   
-// ADD YOUR CODE HERE
-// Define kinematic parameters you may need
-   double rpulley = 5.0 / 1000.0;   //[m] from HW2 and physical measurement
-   double rsector = 74.0 / 1000.0;   //[m] //from HW2 and measured from STL file 66.9 + 5 mm
-
 #ifdef ENABLE_MASS_SPRING_DAMP
 
+//find which two points will be affected
+    //array containing difference between user position and all clay positions
+    xdiffUserMass = xUser - xMass //create a function to do this for all elements
+
+    //choose the clay element to interact with as
+    the element with minimum xdiffUserMass //function that gets minimum value
+
+    //find 2nd element depending on if  xUser  > or < xMass
+
+//calculate user applied force NOTE: There are no Fy forces on the MASSES because they do not translate up and down
+//the reaction force on the user WILL have Fy forces
+    //FUserx1 = k * d * abs( xUser - x1 ) / lengthBetween) ) + b * vXUser * abs( xUser - x1 ) / lengthBetween) )
+    //FUserx2 = k * d * abs( xUser - x2 ) / lengthBetween) ) + b * vXUser * abs( xUser - x1 ) / lengthBetween) )
+
+
 //calculate current xmass position
+
+//find penetration distance 
+    //calculate line equation
+        //ax + by + c = 0
+            //a = y1 - y2
+            //b = x2 - x1
+            //c = (x1 - x2) * y1 + (y2 - y1) * x1
+    //calculate normal distance
+        //d = abs ( a * xuser + b * yuser + c) / sqrt( a^2 + b^2 )
+
   
   //forces
   //Serial.println((xh - xmass), 5);
@@ -80,16 +110,6 @@ void loop()
   else{
   userForce = 0;
   }
-
-  force = - userForce * 0.25; //add Haptic feedback
-//  if (force > 2.5){
-//    force = 2.5;
-//  }
-//  if (force < -2.5){
-//    force = -2.5;
-//  }
-
-  //Serial.println((String) userForce + "," + force);
   
   springForce = -k * (xmass - springEqX); //spring force
   //println(springForce);
@@ -135,4 +155,26 @@ void loop()
   //calculate torque output here
   //T[T1 T2] =  J.transpose(dx3, dy3, dth1, dth4) * Force[Fx Fy];
  
+}
+
+void InitializeXmass(float xmass[], const int points){
+  for (int index = 1; index < points - 1; xmass[index] += xmass[index-1] + lengthBetween, index++){}
+  return;
+}
+
+
+void InitializeYmass(float ymass[], const float startingDepth){
+  for (int index = 0; index < points - 1; ymass[index] = startingDepth, index++){}
+  return;
+}
+
+void PrintArray(float printArray[], const int points){
+  Serial.print("\n");
+  for (int index = 0; index < points - 1 ; index++){
+    Serial.print(printArray[index],3);
+    Serial.print(" ");
+    }
+  Serial.print("\n");
+  Serial.println();  
+  return;
 }
