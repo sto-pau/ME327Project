@@ -115,10 +115,16 @@ void loop()
   // Define kinematic parameters you may need
      //double rh = ?;   //[m]
   // Step B.1: print updatedPos via serial monitor
+  //Serial.println((float)updatedPos,5);
   // Step B.6: double ts = ?; // Compute the angle of the sector pulley (ts) in degrees based on updatedPos
+  double ts = updatedPos*-0.011+151.9;
+  Serial.println((float)ts,5);
   // Step B.7: xh = ?;       // Compute the position of the handle (in meters) based on ts (in radians)
   // Step B.8: print xh via serial monitor
-    Serial.println((float)updatedPos,5);
+  // @cal angle 841tiks
+  // 135deg = 1534tiks;
+  // 90deg = 5608tiks; 
+    
   
   //*************************************************************
   //*** Section 3. Assign a motor output force in Newtons *******  
