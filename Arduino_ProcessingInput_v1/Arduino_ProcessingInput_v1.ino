@@ -3,6 +3,7 @@
 //--------------------------------------------------------------------------
 // Parameters that define what environment to render
 #define ENABLE_MASS_SPRING_DAMP 
+
 //#define DEBUGGING 
 
 #define ARDBUFFER 16 //for serial line printing
@@ -18,44 +19,38 @@ float unitsDivisor = 1000.0;
 const float lengthWorkspace = 193.0 / unitsDivisor; //usable work length
 const int points = 10; //number of points to be used (needs to be constant to initialize arrays)
 const float lengthBetween = lengthWorkspace / (points - 1); //distance between points
-const float startingDepth = 125 / unitsDivisor; //thickness of clay block when starting
+const float startingDepth = 125.0 / unitsDivisor; //thickness of clay block when starting
 
 //function prototypes here (not needed for arduino?)
 //float xmass[points] InitializeXmass(float xmass[points]);
 
 // Kinematics variables
-float yUser = 0;
-float xUser = 0;
-float dyUser = 0;
+float yUser = 0.0;
+float xUser = 0.0;
+float dyUser = 0.0;
 
 // Force output variables
-double force = 0;           // force at the handle
-double Tp = 0;              // torque of the motor pulley
+double force = 0.0;           // force at the handle
+double Tp = 0.0;              // torque of the motor pulley
 
 //mass spring dampners system 
 //position variables
-float ymass[points] = {0}; //based on x & y axis of pantograph
-float xmass[points] = {0}; //based on x & y axis of pantograph
+float ymass[points] = {0.0}; //based on x & y axis of pantograph
+float xmass[points] = {0.0}; //based on x & y axis of pantograph
   //use for loop to fill array with points distance lengthBetween IN MAIN     
   
 //change in position variables
-float velMass[points] = {0};
-float accMass[points] = {0};
-float velMassPrev[points] =  {0};
-float accMassPrev[points] =  {0};
-//force calculation variables
-float userForceX = 0.0;
-float userForceY = 0.0;
+float velMass[points] = {0.0};
+float accMass[points] = {0.0};
+float velMassPrev[points] =  {0.0};
+float accMassPrev[points] =  {0.0};
 
-//calculation variables
-float xdiffUserMass[points] = {0};
-int clayIndexClosest = points + 1; //should start as impossible index
-int clayIndexNext = points + 1; //should start as impossible index
-float xLineWeight;
-float yLineWeight;
-float  lineConstant;
-float m;
-float b;
+//force calculation variables
+  //clay variables refer to each individual block, not the total mass
+float kClay = 100.0;
+float dClay = 10.0;
+float massClay = 2.0;
+float kUser = 1000.0;
 
 int mSStart = 0;
 
@@ -64,7 +59,8 @@ int mSStart = 0;
 // --------------------------------------------------------------
 void setup() 
 {  
-  
+
+  ///****setup, first starting****///
   //InitializeYmass(&ymass[0],startingDepth);
   InitializeXmass(&ymass[0]);
   InitializeXmass(&xmass[0]);
@@ -74,6 +70,9 @@ void setup()
   PrintArray(ymass);
   PrintArray(xmass);
 
+  
+  ///****Recieve User Information****///
+  
   //xUser = xmass[0] - 0.05;
   xUser = xmass[points - 1] + 0.05; //<xUser, yUser> = < -(xPos - 55), ypos + 89.8 > 
   Serial.println(xUser,6);
@@ -86,15 +85,22 @@ void setup()
   } 
   
   Serial.println(xUser,6);
+
+  ///****Collision Detection Setup****///
+  
+  float xdiffUserMass[points] = {0};
   
   memcpy(xdiffUserMass, xmass, sizeof(xdiffUserMass));
   
   AddValue(xdiffUserMass, -xUser);
   PrintArray(xdiffUserMass);
 
+  int clayIndexClosest = points + 1; //should start as impossible index
+
   clayIndexClosest = indexMin(xdiffUserMass);
   Serial.println(clayIndexClosest);
 
+  int clayIndexNext = points + 1; //should start as impossible index
   
   if (xUser > xmass[clayIndexClosest]){ // inequality could be if xdiffUserMass[clayIndexClosest] <= 0 
     clayIndexNext = clayIndexClosest + 1;
@@ -113,29 +119,6 @@ void setup()
 
   Serial.println(clayIndexNext);
 
-  //line equations
-//
-//  xmass[clayIndexClosest] = 0;
-//  ymass[clayIndexClosest] = 0;
-//
-//  xmass[clayIndexNext] = 100;
-//  ymass[clayIndexNext] = 100;
-//  
-//  yLineWeight = xmass[clayIndexClosest] - xmass[clayIndexNext]; //b 
-//  xLineWeight = ymass[clayIndexNext] - ymass[clayIndexClosest]; //a
-//  lineConstant = xmass[clayIndexClosest] * ymass[clayIndexNext] - ymass[clayIndexClosest] * xmass[clayIndexNext]; //c
-//
-//  m =  xLineWeight / yLineWeight;
-//  b = lineConstant;
-//
-//  ardprintf("%f, %f, %f, %f, %f", xLineWeight, yLineWeight, lineConstant, m, b);
-//
-//  xUser = 25;
-//  yUser = 75;
-//
-//  double d = abs ( xLineWeight * xUser + yLineWeight * yUser  + lineConstant ) / sqrt(xLineWeight*xLineWeight + yLineWeight*yLineWeight);
-//  Serial.println(d);
-
   xmass[clayIndexClosest] = 50; //150
   ymass[clayIndexClosest] = 100; //0
 
@@ -152,25 +135,40 @@ void setup()
   
   int slopeHigherIndex = max(clayIndexClosest, clayIndexNext);
   Serial.println(slopeHigherIndex);
+
+  float xLineWeight = 0.0;
+  float yLineWeight = 0.0;
+  float lineConstant = 0.0;
   
   yLineWeight = xmass[slopeHigherIndex] - xmass[slopeLowerIndex]; //b 
   xLineWeight = ymass[slopeLowerIndex] - ymass[slopeHigherIndex]; //a
   lineConstant = xmass[slopeLowerIndex] * ymass[slopeHigherIndex] - ymass[slopeLowerIndex] * xmass[slopeHigherIndex]; //c
 
-  m =  xLineWeight / yLineWeight;
-  b = lineConstant;
-
-  ardprintf("%f, %f, %f, %f, %f", xLineWeight, yLineWeight, lineConstant, m, b);
+  ardprintf("%f, %f, %f", xLineWeight, yLineWeight, lineConstant);
 
   xUser = 75;
   yUser = 50;
 
-  double d = abs ( xLineWeight * xUser + yLineWeight * yUser  + lineConstant ) / sqrt(xLineWeight*xLineWeight + yLineWeight*yLineWeight);
-  Serial.println(d);
-
   float yOnLineUser = - ( (xLineWeight * xUser + lineConstant) / yLineWeight );
   Serial.println(yOnLineUser);
-  
+
+  ///****Test Collision and Set userForce onto the clay accordingly****///
+
+  //initialize userForce as all zeroes before proving contact was made
+  float userForce[points] = {0};
+
+  if (yUser < yOnLineUser){ //if there is contact, set the adjacent clay userForce not to zero  
+    
+      float d = abs ( xLineWeight * xUser + yLineWeight * yUser  + lineConstant ) / sqrt(xLineWeight*xLineWeight + yLineWeight*yLineWeight); //penetration distance
+      Serial.println(d);
+      userForce[clayIndexClosest] = kUser* d * abs( ( xUser - xmass[clayIndexClosest] ) / lengthBetween );
+      userForce[clayIndexNext] = kUser * d * abs( ( xUser - xmass[clayIndexNext] ) / lengthBetween );
+            
+  }
+
+ ///****Calculate total force on clay****///
+
+ ///***Calculate resulting motion****///
   
 
   

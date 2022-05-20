@@ -1,3 +1,10 @@
+So far written code can:
+set the initial clay point x & y locations,
+determine the closest two points to the user positon, 
+get the line in between the two points,
+determine if the user is penetrating the clay, 
+and calcualte the perpendicular penetration. 
+
 //workspace setup
     length = usable work length
     points = number of points to be used
@@ -23,6 +30,8 @@
 
 	// Calculate the filtered velocity of the handle using an infinite impulse response filter
 	dyUser_filt = .9*dyUser + 0.1*dyUser_prev; 
+	
+//handle case if xUser is = or surpasses min/max xMass
 
 //find which two points will be affected
     //array containing difference between user position and all clay positions
@@ -32,9 +41,11 @@
     the element with minimum xdiffUserMass //function that gets minimum value
 
     //find 2nd element depending on if  xUser  > or < xMass
-	//handle case if xUser is = or surpasses min/max xMass
+	
+//if user is >= xMax of adjacent clay
+	pass to end, set flag to not process, ext
 
-//find penetration distance 
+//find penetration distance  https://bobobobo.wordpress.com/2008/01/07/solving-linear-equations-ax-by-c-0/
     //calculate line equation
         //ax + by + c = 0
             //a = y1 - y2
@@ -42,6 +53,10 @@
             //c = (x1 - x2) * y1 + (y2 - y1) * x1
     //calculate normal distance
         //d = abs ( a * xuser + b * yuser + c) / sqrt( a^2 + b^2 )
+		
+	//determine if there is penetration by finding the depth at the user height to be on the line
+	//if depth is not less than this, then not inside the line
+		
 
 //calculate user applied force
     //FUserx1 = k * d * abs( xUser - x1 ) / lengthBetween) ) + b * vXUser * abs( xUser - x1 ) / lengthBetween) )
