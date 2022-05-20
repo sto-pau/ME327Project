@@ -167,6 +167,13 @@ void setup()
 
   double d = abs ( xLineWeight * xUser + yLineWeight * yUser  + lineConstant ) / sqrt(xLineWeight*xLineWeight + yLineWeight*yLineWeight);
   Serial.println(d);
+
+  float yOnLineUser = - ( (xLineWeight * xUser + lineConstant) / yLineWeight );
+  Serial.println(yOnLineUser);
+  
+  
+
+  
 }
 
 // --------------------------------------------------------------
