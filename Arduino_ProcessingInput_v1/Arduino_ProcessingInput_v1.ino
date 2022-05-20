@@ -218,7 +218,21 @@ void loop()
     PrintArray(accMass);    
 
     //integrate to find velocity and postion
+
+    //change in time
     float loopTime = (1.0 / 1000.0);
+
+    //calculated based on actual loop time (may need to use if becomes very slow)
+    float mSTemp = millis();
+    float seconds = ( mSTemp - mSStart ) / (64 * 1000.0); //divide by 64 to account for motor prescalar
+    mSStart = mSTemp;
+
+    Serial.println();
+    Serial.println();
+    Serial.println(seconds, 6);
+    Serial.println();
+    Serial.println();
+    
     IntegratePrevious(velMass,accMass,accMassPrev, loopTime); //integrate for velocity
     IntegratePrevious(ymass,velMass,velMassPrev, loopTime); //integrate for position  
 
