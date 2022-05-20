@@ -21,75 +21,97 @@ Serial myPort;        // The serial port
 float inByte = 0;
 float lastByte = 0;
 
-//self initialized variables
-String x_pos_str;
-float x_pos_f;
-float x_pos;
-String y_pos_str;
-float y_pos_f;
-float y_pos;
-//parameters for graphics
-float x_min = 0.01;
-float x_max = 0.04;
-float y_min = -0.02;
-float y_max = 0.02;
-float x_map_min = 0;
-float x_map_max = 200;
-float y_map_min = 0;
-float y_map_max = 200;
+// self initialized variables
+String rxString;
+String[] rxArray;
+int idx1;
+float newX1;
+float newY1;
+int idx2;
+float newX2;
+float newY2;
 
+// constant values for graphics
+float xMin = 0.01;
+float xMax = 0.04;
+float yMin = -0.02;
+float yMax = 0.02;
+float xMapMin = 0;
+float xMapMax = 200;
+float yMapMin = 0;
+float yMapMax = 200;
+float spaceBuffer = 10;
+
+// array to store point positions
+int numPoints = 10;
+float[][] points;
+// handle coordinates
+float rawXh;
+float rawYh;
+float xh;
+float yh;
 
 void setup () {
   // set the window size:
   size(600, 400);        
 
+  // initialize points
+  points = new float[numPoints][2];
+  // populate points
+  for (int i = 0; i < numPoints; i += 1){
+    points[i][0] = (i+1) * height/(numPoints+1);
+    points[i][1] = width - 200;
+  }
+
   // List all the available serial ports
   println(Serial.list());
   // Check the listed serial ports in your machine
   // and use the correct index number in Serial.list()[].
-
   myPort = new Serial(this, Serial.list()[9], 38400);  //make sure baud rate matches Arduino
 
   // A serialEvent() is generated when a newline character is received :
   myPort.bufferUntil('\n');
   background(0);      // set inital background:
 }
+
 void draw () {
   // everything happens in the serialEvent()
-  background(0); //uncomment if you want to control a ball
+  background(0);
   stroke(127,34,255);     //stroke color
-  strokeWeight(4);        //stroke wider
+  strokeWeight(4);        //stroke width
   
-  // START EDITING HERE
-  
-  // Virtual Wall
-  // map the wall position from units of Arduino simulation to the screen width.
-  // HINT: use map(myValue, minValueIn, maxValueIn, minValueOut, maxValueOut) to map from units of your Arduino simulation to pixels
-  // draw the wall as a line
-  // draw an ellipse to represent user position
-
+  // draw center line
+  line(300, 0, 300, 400);
+  // draw handle position
+  ellipse(xh, yh, 30, 30);
+  // draw points for pottery
+  for (int i = 0; i < numPoints; i += 1) {
+    point(points[i][0], points[i][1]);
+  }
 }
 
 void serialEvent (Serial myPort) {
-  // read the input string as String
-  x_pos_str = myPort.readStringUntil('\t');
-  // convert to float
-  x_pos_f = float(x_pos_str);
-  // check if value is valid and update position
-  if (x_pos != Float.NaN){
-    x_pos = map(x_pos_f, x_min, x_max, x_map_min, x_map_max);
-  }
-  else {
-    x_pos = 0.5;
-  }
-  
-  // repeat for second part of the input string
-  y_pos_str = myPort.readStringUntil('\n');
-  y_pos_f = float(y_pos_str);
-  if (y_pos_f != Float.NaN){
-    y_pos = map(y_pos_f, y_min, y_max, y_map_min, y_map_max);
-  }
-  else {
-    y_pos = 0.5;
+  // read input string
+  rxString = myPort.readStringUntil('\n');
+  // process received data
+  if (rxString != null){
+    // split into array of strings
+    rxArray = split(rxString, ',');
+    // convert values to ints/floats and update values
+    idx1 = Integer.parseInt(rxArray[0]);
+    newX1 = float(rxArray[1]);
+    newY1 = float(rxArray[2]);
+    idx2 = Integer.parseInt(rxArray[3]);
+    newX2 = float(rxArray[4]);
+    newY2 = float(rxArray[5]);
+    rawXh = float(rxArray[6]);
+    rawYh = float(rxArray[7]);
+    // map and update values
+    xh = map(rawXh, xMin, xMax, xMapMin, xMapMax);  // x handle position
+    yh = map(rawYh, yMin, yMax, yMapMin, yMapMax);  // y handle position
+    points[idx1][0] = map(newX1, xMin, xMax, xMapMin, xMapMax-spaceBuffer);  // first point x, TODO: check if mapping correct
+    points[idx1][1] = map(newY1, yMin, yMax, yMapMin, yMapMax);  // first point y
+    points[idx2][0] = map(newX2, xMin, xMax, xMapMin, xMapMax-spaceBuffer);  // first point x
+    points[idx2][1] = map(newY2, yMin, yMax, yMapMin, yMapMax);  // first point y
   }
 }
