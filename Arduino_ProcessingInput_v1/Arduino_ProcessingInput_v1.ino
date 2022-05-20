@@ -5,6 +5,8 @@
 #define ENABLE_MASS_SPRING_DAMP 
 //#define DEBUGGING 
 
+#define ARDBUFFER 16 //for serial line printing
+
 // Includes
 #include <math.h>
 
@@ -49,6 +51,11 @@ float userForceY = 0.0;
 float xdiffUserMass[points] = {0};
 int clayIndexClosest = points + 1; //should start as impossible index
 int clayIndexNext = points + 1; //should start as impossible index
+float xLineWeight;
+float yLineWeight;
+float  lineConstant;
+float m;
+float b;
 
 int mSStart = 0;
 
@@ -58,15 +65,17 @@ int mSStart = 0;
 void setup() 
 {  
   
-  InitializeYmass(&ymass[0],startingDepth);
+  //InitializeYmass(&ymass[0],startingDepth);
+  InitializeXmass(&ymass[0]);
   InitializeXmass(&xmass[0]);
   
   Serial.begin(9600);
   
   PrintArray(ymass);
   PrintArray(xmass);
-  
-  xUser = xmass[0] - 0.05;
+
+  //xUser = xmass[0] - 0.05;
+  xUser = xmass[points - 1] + 0.05; //<xUser, yUser> = < -(xPos - 55), ypos + 89.8 > 
   Serial.println(xUser,6);
 
   if (xUser <= xmass[0]){
@@ -74,7 +83,7 @@ void setup()
   }
   else if (xUser >= xmass[points - 1]){
       xUser = xmass[points - 1];
-  }
+  } 
   
   Serial.println(xUser,6);
   
@@ -103,6 +112,61 @@ void setup()
   }
 
   Serial.println(clayIndexNext);
+
+  //line equations
+//
+//  xmass[clayIndexClosest] = 0;
+//  ymass[clayIndexClosest] = 0;
+//
+//  xmass[clayIndexNext] = 100;
+//  ymass[clayIndexNext] = 100;
+//  
+//  yLineWeight = xmass[clayIndexClosest] - xmass[clayIndexNext]; //b 
+//  xLineWeight = ymass[clayIndexNext] - ymass[clayIndexClosest]; //a
+//  lineConstant = xmass[clayIndexClosest] * ymass[clayIndexNext] - ymass[clayIndexClosest] * xmass[clayIndexNext]; //c
+//
+//  m =  xLineWeight / yLineWeight;
+//  b = lineConstant;
+//
+//  ardprintf("%f, %f, %f, %f, %f", xLineWeight, yLineWeight, lineConstant, m, b);
+//
+//  xUser = 25;
+//  yUser = 75;
+//
+//  double d = abs ( xLineWeight * xUser + yLineWeight * yUser  + lineConstant ) / sqrt(xLineWeight*xLineWeight + yLineWeight*yLineWeight);
+//  Serial.println(d);
+
+  xmass[clayIndexClosest] = 50; //150
+  ymass[clayIndexClosest] = 100; //0
+
+  xmass[clayIndexNext] = 150; //50
+  ymass[clayIndexNext] = 0; //100 
+
+  //17.68 //17.68
+
+  Serial.println(clayIndexNext);
+
+  //line equations
+  int slopeLowerIndex = min(clayIndexClosest, clayIndexNext);
+  Serial.println(slopeLowerIndex);
+  
+  int slopeHigherIndex = max(clayIndexClosest, clayIndexNext);
+  Serial.println(slopeHigherIndex);
+  
+  yLineWeight = xmass[slopeHigherIndex] - xmass[slopeLowerIndex]; //b 
+  xLineWeight = ymass[slopeLowerIndex] - ymass[slopeHigherIndex]; //a
+  lineConstant = xmass[slopeLowerIndex] * ymass[slopeHigherIndex] - ymass[slopeLowerIndex] * xmass[slopeHigherIndex]; //c
+
+  m =  xLineWeight / yLineWeight;
+  b = lineConstant;
+
+  ardprintf("%f, %f, %f, %f, %f", xLineWeight, yLineWeight, lineConstant, m, b);
+
+  xUser = 75;
+  yUser = 50;
+
+  double d = abs ( xLineWeight * xUser + yLineWeight * yUser  + lineConstant ) / sqrt(xLineWeight*xLineWeight + yLineWeight*yLineWeight);
+  Serial.println(d);
 }
 
 // --------------------------------------------------------------
@@ -240,4 +304,52 @@ int indexMin(float targetArray[]){
     }
     
     return minIndex;
+}
+
+int ardprintf(char *str, ...)
+{
+  int i, count=0, j=0, flag=0;
+  char temp[ARDBUFFER+1];
+  for(i=0; str[i]!='\0';i++)  if(str[i]=='%')  count++;
+
+  va_list argv;
+  va_start(argv, count);
+  for(i=0,j=0; str[i]!='\0';i++)
+  {
+    if(str[i]=='%')
+    {
+      temp[j] = '\0';
+      Serial.print(temp);
+      j=0;
+      temp[0] = '\0';
+
+      switch(str[++i])
+      {
+        case 'd': Serial.print(va_arg(argv, int));
+                  break;
+        case 'l': Serial.print(va_arg(argv, long));
+                  break;
+        case 'f': Serial.print(va_arg(argv, double));
+                  break;
+        case 'c': Serial.print((char)va_arg(argv, int));
+                  break;
+        case 's': Serial.print(va_arg(argv, char *));
+                  break;
+        default:  ;
+      };
+    }
+    else 
+    {
+      temp[j] = str[i];
+      j = (j+1)%ARDBUFFER;
+      if(j==0) 
+      {
+        temp[ARDBUFFER] = '\0';
+        Serial.print(temp);
+        temp[0]='\0';
+      }
+    }
+  };
+  Serial.println();
+  return count + 1;
 }
