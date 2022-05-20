@@ -37,20 +37,18 @@ double Tp = 0.0;              // torque of the motor pulley
 //position variables
 float ymass[points] = {0.0}; //based on x & y axis of pantograph
 float xmass[points] = {0.0}; //based on x & y axis of pantograph
-  //use for loop to fill array with points distance lengthBetween IN MAIN     
+  //use for loop to fill array with points distance lengthBetween IN MAIN  
+
+//force calculation
+float claySpringForce[points] = {0.0};
+float clayDampForce[points] = {0.0};
+float clayTotalForce[points] = {0.0};
   
 //change in position variables
 float velMass[points] = {0.0};
 float accMass[points] = {0.0};
 float velMassPrev[points] =  {0.0};
 float accMassPrev[points] =  {0.0};
-
-//force calculation variables
-  //clay variables refer to each individual block, not the total mass
-float kClay = 100.0;
-float dClay = 10.0;
-float massClay = 2.0;
-float kUser = 1000.0;
 
 int mSStart = 0;
 
@@ -62,8 +60,8 @@ void setup()
 
   ///****setup, first starting****///
   
-  //InitializeYmass(&ymass[0],startingDepth);
-  InitializeXmass(&ymass[0]);
+  SetAllElements(&ymass[0],startingDepth);
+  //InitializeXmass(&ymass[0]);
   InitializeXmass(&xmass[0]);
   
   Serial.begin(9600);
@@ -146,7 +144,7 @@ void setup()
 
   ardprintf("%f, %f, %f", xLineWeight, yLineWeight, lineConstant);
 
-  xUser = 100;
+  xUser = 60;
   yUser = 25;
 
   float yOnLineUser = - ( (xLineWeight * xUser + lineConstant) / yLineWeight );
@@ -161,11 +159,14 @@ void setup()
   float userForce[points] = {0.0};
 
   if (yUser < yOnLineUser){ //if there is contact, set the adjacent clay userForce not to zero  
+
+    //force calculation variables
+      float kUser = 1000.0;
     
       float d = abs ( xLineWeight * xUser + yLineWeight * yUser  + lineConstant ) / sqrt(xLineWeight*xLineWeight + yLineWeight*yLineWeight); //penetration distance
       Serial.println(d);
-      userForce[clayIndexClosest] = kUser* d * abs( ( xUser - xmass[clayIndexClosest] ) / lengthBetween );
-      userForce[clayIndexNext] = kUser * d * abs( ( xUser - xmass[clayIndexNext] ) / lengthBetween );
+      userForce[clayIndexClosest] = -kUser* d * abs( ( xUser - xmass[clayIndexClosest] ) / lengthBetween ); //need to add negative such that clay is being pushed inwards
+      userForce[clayIndexNext] = -kUser * d * abs( ( xUser - xmass[clayIndexNext] ) / lengthBetween ); //see above
 
       PrintArray(userForce);
             
@@ -173,9 +174,21 @@ void setup()
 
  ///****Calculate total force on clay****///
 
+    //clay variables refer to each individual block, not the total mass
+    
+    UpdateClaySpringForce(&claySpringForce[0], &ymass[0]);
+    PrintArray(ymass);
+    PrintArray(claySpringForce);
+
+    SetAllElements(&velMass[0],-1);
+    UpdateClayDampForce(&clayDampForce[0], &velMass[0]);
+    PrintArray(clayDampForce);
+
  ///****Calculate resulting motion****///
 
-///****Calculate force on the user****////
+ float massClay = 2.0;
+
+///****Calculate force on the user****///
 
    
 }
@@ -283,8 +296,7 @@ void InitializeXmass(float xmass[]){
   return;
 }
 
-
-void InitializeYmass(float ymass[], const float startingDepth){
+void SetAllElements(float ymass[], const float startingDepth){
   for (int index = 0; index < points; ymass[index] = startingDepth, index++){}
   return;
 }
@@ -294,10 +306,26 @@ void AddValue(float targetArray[], float val2add){
   return;
 }
 
+void UpdateClaySpringForce(float claySpringForce[], float ymass[]){
+  float kClay = 100.0;
+  for (int index = 0; index < points; index++){    
+    claySpringForce[index] = kClay * (ymass[index] - startingDepth);  //no negative sign so that the clay resists OUTWARDS, positive Y direction     
+  }  
+ return;
+}
+
+void UpdateClayDampForce(float clayDampForce[], float velMass[]){
+  float bClay = 10.0;
+  for (int index = 0; index < points; index++){    
+    clayDampForce[index] = -bClay * velMass[index];          
+  }  
+ return;
+}
+
 void PrintArray(float printArray[]){  
   Serial.print("\n");
   for (int index = 0; index < points; index++){
-    Serial.print(printArray[index],6);
+    Serial.print(printArray[index],3);
     Serial.print(" ");
     }
   Serial.print("\n");
