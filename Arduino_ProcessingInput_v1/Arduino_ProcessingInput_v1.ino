@@ -2,7 +2,8 @@
 // Code to start Processing Code input setup
 //--------------------------------------------------------------------------
 // Parameters that define what environment to render
-//#define ENABLE_MASS_SPRING_DAMP 
+#define ENABLE_MASS_SPRING_DAMP 
+//#define DEBUGGING 
 
 // Includes
 #include <math.h>
@@ -30,19 +31,24 @@ double force = 0;           // force at the handle
 double Tp = 0;              // torque of the motor pulley
 
 //mass spring dampners system 
-  //position variables
-  float ymass[points] = {0}; //based on x & y axis of pantograph
-  float xmass[points] = {0}; //based on x & y axis of pantograph
-    //use for loop to fill array with points distance lengthBetween IN MAIN     
-    
-  //change in position variables
-  float velMass[points] = {0};
-  float accMass[points] = {0};
-  float velMassPrev[points] =  {0};
-  float accMassPrev[points] =  {0};
-  //force calculation variables
-  float userForceX = 0.0;
-  float userForceY = 0.0;
+//position variables
+float ymass[points] = {0}; //based on x & y axis of pantograph
+float xmass[points] = {0}; //based on x & y axis of pantograph
+  //use for loop to fill array with points distance lengthBetween IN MAIN     
+  
+//change in position variables
+float velMass[points] = {0};
+float accMass[points] = {0};
+float velMassPrev[points] =  {0};
+float accMassPrev[points] =  {0};
+//force calculation variables
+float userForceX = 0.0;
+float userForceY = 0.0;
+
+//calculation variables
+float xdiffUserMass[points] = {0};
+int clayIndexClosest = points + 1; //should start as impossible index
+int clayIndexNext = points + 1; //should start as impossible index
 
 int mSStart = 0;
 
@@ -53,13 +59,22 @@ void setup()
 {
   
   InitializeYmass(&ymass[0],startingDepth);
-  InitializeXmass(&xmass[0], points);
+  InitializeXmass(&xmass[0]);
   
   Serial.begin(9600);
-  
-  PrintArray(ymass, points);
-  Serial.println("now xmass");
-  PrintArray(xmass, points);
+
+
+  xUser = lengthWorkspace / 2;
+  Serial.println(xUser,3);
+  PrintArray(ymass);
+  PrintArray(xmass);
+  Serial.println(xUser); 
+  memcpy(xdiffUserMass, xmass, sizeof(xdiffUserMass));
+  AddValue(xdiffUserMass, -xUser);
+  PrintArray(xdiffUserMass);
+
+  clayIndexClosest = indexMin(xdiffUserMass);
+  Serial.println(clayIndexClosest);
 
 }
 
@@ -75,14 +90,16 @@ void loop()
   
 #ifdef ENABLE_MASS_SPRING_DAMP
 
+#ifdef DEBUGGING
+
 //find which two points will be affected
     //array containing difference between user position and all clay positions
-    xdiffUserMass = xUser - xMass //create a function to do this for all elements
 
     //choose the clay element to interact with as
-    the element with minimum xdiffUserMass //function that gets minimum value
+    //the element with minimum xdiffUserMass //function that gets minimum value
 
     //find 2nd element depending on if  xUser  > or < xMass
+
 
 //calculate user applied force NOTE: There are no Fy forces on the MASSES because they do not translate up and down
 //the reaction force on the user WILL have Fy forces
@@ -152,12 +169,14 @@ void loop()
 
 #endif
 
+#endif
+
   //calculate torque output here
   //T[T1 T2] =  J.transpose(dx3, dy3, dth1, dth4) * Force[Fx Fy];
  
 }
 
-void InitializeXmass(float xmass[], const int points){
+void InitializeXmass(float xmass[]){
   for (int index = 1; index < points - 1; xmass[index] += xmass[index-1] + lengthBetween, index++){}
   return;
 }
@@ -168,7 +187,12 @@ void InitializeYmass(float ymass[], const float startingDepth){
   return;
 }
 
-void PrintArray(float printArray[], const int points){
+void AddValue(float targetArray[], float val2add){
+  for (int index = 0; index < points - 1; targetArray[index] += val2add, index++){}
+  return;
+}
+
+void PrintArray(float printArray[]){  
   Serial.print("\n");
   for (int index = 0; index < points - 1 ; index++){
     Serial.print(printArray[index],3);
@@ -176,5 +200,17 @@ void PrintArray(float printArray[], const int points){
     }
   Serial.print("\n");
   Serial.println();  
-  return;
+  return;  
+}
+
+int indexMin(float targetArray[]){
+  
+    int minIndex = 0; //have to create outside forloop to pass it out
+    
+    for(int currentIndex = 1; currentIndex < points; currentIndex++){        
+        if(abs(targetArray[currentIndex]) < abs(targetArray[minIndex]))
+          minIndex = currentIndex;           
+    }
+    
+    return minIndex;
 }
