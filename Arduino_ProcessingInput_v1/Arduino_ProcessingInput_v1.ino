@@ -189,7 +189,21 @@ void setup()
 
  ///****Calculate resulting motion****///
 
- float massClay = 2.0;
+    //calculate acceleration from F = ma
+    UpdateClayAccelerations(clayTotalForce, accMass);
+    PrintArray(accMass);    
+
+    //integrate to find velocity and postion
+    float loopTime = (1.0 / 1000.0);
+    IntegratePrevious(velMass,accMass,accMassPrev, loopTime); //integrate for velocity
+    IntegratePrevious(ymass,velMass,velMassPrev, loopTime); //integrate for position  
+
+    PrintArray(velMass);
+    PrintArray(ymass);
+
+    //store acceleration and velocity from last time for use this time
+    memcpy(accMassPrev, accMass, sizeof(accMassPrev));
+    memcpy(velMassPrev, velMass, sizeof(velMassPrev));    
 
 ///****Calculate force on the user****///
 
@@ -332,6 +346,28 @@ void UpdateTotalForce(float clayTotalForce[], float clayDampForce[], float clayS
  return;
 }
 
+void UpdateClayAccelerations(float clayTotalForce[], float accMass[]){
+  
+  float massClay = 2.0;
+  
+  for (int index = 0; index < points; index++){    
+    accMass[index] = clayTotalForce[index] / massClay;           
+  }  
+ return;
+ 
+}
+
+void IntegratePrevious(float velMass[], float accMass[], float accMassPrev[], float loopTime){
+  //for position integration yMass, velMass, vellMassPrev
+  
+  for (int index = 0; index < points; index++){    
+    velMass[index] = velMass[index] + ( 0.5 * (accMassPrev[index] + accMass[index]) * (loopTime) ); //NOTE loop time estimation taken from arduino starter code 0.001;           
+  } 
+   
+ return;
+ 
+}
+
 void PrintArray(float printArray[]){  
   Serial.print("\n");
   for (int index = 0; index < points; index++){
@@ -351,7 +387,6 @@ int indexMin(float targetArray[]){
         if(abs(targetArray[currentIndex]) < abs(targetArray[minIndex]))
           minIndex = currentIndex;           
     }
-    
     return minIndex;
 }
 
