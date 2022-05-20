@@ -32,6 +32,7 @@
     the element with minimum xdiffUserMass //function that gets minimum value
 
     //find 2nd element depending on if  xUser  > or < xMass
+	//handle case if xUser is = or surpasses min/max xMass
 
 //find penetration distance 
     //calculate line equation

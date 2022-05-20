@@ -13,7 +13,7 @@
 float unitsDivisor = 1000.0; 
 
 //workspace setup
-const float lengthWorkspace = 198.0 / unitsDivisor; //usable work length
+const float lengthWorkspace = 193.0 / unitsDivisor; //usable work length
 const int points = 10; //number of points to be used (needs to be constant to initialize arrays)
 const float lengthBetween = lengthWorkspace / (points - 1); //distance between points
 const float startingDepth = 125 / unitsDivisor; //thickness of clay block when starting
@@ -57,27 +57,49 @@ int mSStart = 0;
 // --------------------------------------------------------------
 void setup() 
 {  
+  
   InitializeYmass(&ymass[0],startingDepth);
   InitializeXmass(&xmass[0]);
   
   Serial.begin(9600);
-
-  xUser = lengthWorkspace / 2 + 0.05;
-  Serial.println(xUser,3);
+  
   PrintArray(ymass);
   PrintArray(xmass);
+  
+  xUser = xmass[0] - 0.05;
+  Serial.println(xUser,6);
+
+  if (xUser <= xmass[0]){
+    xUser = xmass[0];
+  }
+  else if (xUser >= xmass[points - 1]){
+      xUser = xmass[points - 1];
+  }
+  
+  Serial.println(xUser,6);
+  
   memcpy(xdiffUserMass, xmass, sizeof(xdiffUserMass));
+  
   AddValue(xdiffUserMass, -xUser);
   PrintArray(xdiffUserMass);
 
   clayIndexClosest = indexMin(xdiffUserMass);
   Serial.println(clayIndexClosest);
 
-  if (xUser > xmass[clayIndexClosest]){ //or could be if xdiffUserMass[clayIndexClosest] < 0
+  
+  if (xUser > xmass[clayIndexClosest]){ // inequality could be if xdiffUserMass[clayIndexClosest] <= 0 
     clayIndexNext = clayIndexClosest + 1;
   }
-  else{
+  else if (xUser < xmass[clayIndexClosest]){
     clayIndexNext = clayIndexClosest - 1;
+  }
+  else if (xUser == xmass[clayIndexClosest]){//if equal, check if at top or bottom
+    if(clayIndexClosest == 0){
+      clayIndexNext = clayIndexClosest + 1;
+    }
+    else if( clayIndexClosest == (points - 1) ){
+        clayIndexNext = clayIndexClosest - 1;
+    }
   }
 
   Serial.println(clayIndexNext);
@@ -200,7 +222,7 @@ void AddValue(float targetArray[], float val2add){
 void PrintArray(float printArray[]){  
   Serial.print("\n");
   for (int index = 0; index < points; index++){
-    Serial.print(printArray[index],3);
+    Serial.print(printArray[index],6);
     Serial.print(" ");
     }
   Serial.print("\n");
