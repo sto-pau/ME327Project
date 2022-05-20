@@ -4,7 +4,7 @@
 // Parameters that define what environment to render
 #define ENABLE_MASS_SPRING_DAMP 
 
-//#define DEBUGGING 
+#define DEBUGGING 
 
 #define ARDBUFFER 16 //for serial line printing
 
@@ -56,7 +56,6 @@ int mSStart = 0;
 // --------------------------------------------------------------
 void setup() 
 {  
-
   ///****setup, first starting****///
   
   SetAllElements(&ymass[0],startingDepth);
@@ -66,13 +65,31 @@ void setup()
   Serial.begin(9600);
   
   PrintArray(ymass);
-  PrintArray(xmass);
+  PrintArray(xmass); 
+   
+} // end of setup loop
+
+// --------------------------------------------------------------
+// Main Loop
+// --------------------------------------------------------------
+void loop()
+{
   
-  ///****Recieve User Information****///
+  //*************************************************************
+  //******************* Rendering Algorithms ********************
+  //*************************************************************
+  
+#ifdef ENABLE_MASS_SPRING_DAMP
+
+#ifdef DEBUGGING
+
+///****Recieve User Information****///
   
   xUser = xmass[0] - 0.05;
   //xUser = xmass[points - 1] + 0.05; //<xUser, yUser> = < -(xPos - 55), ypos + 89.8 > 
   Serial.println(xUser,6);
+
+  yUser = startingDepth;
 
   if (xUser <= xmass[0]){//handle case if xUser is = or surpasses min/max xMass
     xUser = xmass[0];
@@ -82,6 +99,7 @@ void setup()
   } 
   
   Serial.println(xUser,6);
+  Serial.println(yUser,6);
 
   ///****Collision Detection Setup****///
   
@@ -116,19 +134,6 @@ void setup()
     }
   }
 
-  clayIndexClosest = 0;
-  clayIndexNext = 1;
-
-  Serial.println(clayIndexNext);
-
-  xmass[clayIndexClosest] = 50; //150
-  ymass[clayIndexClosest] = 150; //0
-
-  xmass[clayIndexNext] = 150; //50
-  ymass[clayIndexNext] = 50; //100 
-
-  //17.68 //17.68
-
   Serial.println(clayIndexNext);
   
   //find penetration distance
@@ -149,9 +154,6 @@ void setup()
   lineConstant = xmass[slopeLowerIndex] * ymass[slopeHigherIndex] - ymass[slopeLowerIndex] * xmass[slopeHigherIndex]; //c
 
   ardprintf("%f, %f, %f", xLineWeight, yLineWeight, lineConstant);
-
-  xUser = 60;
-  yUser = 25;
 
   //determine if there is penetration by finding the depth at the user height to be on the line
   float yOnLineUser = - ( (xLineWeight * xUser + lineConstant) / yLineWeight ); //if depth is not less than this, then not inside the line
@@ -198,15 +200,14 @@ void setup()
  
  ///****Calculate total force on clay****///
  
-    UpdateClaySpringForce(&claySpringForce[0], &ymass[0]);
+    UpdateClaySpringForce(&claySpringForce[0], &ymass[0]); //spring force
     PrintArray(ymass);
     PrintArray(claySpringForce);
 
-    SetAllElements(&velMass[0],-1);
-    UpdateClayDampForce(&clayDampForce[0], &velMass[0]);
+    UpdateClayDampForce(&clayDampForce[0], &velMass[0]);//dampner force
     PrintArray(clayDampForce);
 
-    UpdateTotalForce(clayTotalForce,clayDampForce,claySpringForce,userForce);
+    UpdateTotalForce(clayTotalForce,clayDampForce,claySpringForce,userForce); //total force
     PrintArray(clayTotalForce);    
 
  ///****Calculate resulting motion****///
@@ -226,34 +227,16 @@ void setup()
 
     //store acceleration and velocity from last time for use this time
     memcpy(accMassPrev, accMass, sizeof(accMassPrev));
-    memcpy(velMassPrev, velMass, sizeof(velMassPrev));    
-   
-}
+    memcpy(velMassPrev, velMass, sizeof(velMassPrev));   
 
-// --------------------------------------------------------------
-// Main Loop
-// --------------------------------------------------------------
-void loop()
-{
-  
-  //*************************************************************
-  //******************* Rendering Algorithms ********************
-  //*************************************************************
-  
-#ifdef ENABLE_MASS_SPRING_DAMP
+#endif //DEBUGGING
 
-#ifdef DEBUGGING
-
-/
-
-#endif
-
-#endif
+#endif //ENABLE_MASS_SPRING_DAMP
 
   //calculate torque output here
   //T[T1 T2] =  J.transpose(dx3, dy3, dth1, dth4) * Force[Fx Fy];
  
-}
+} //end of main loop
 
 ///****Function****///
 
