@@ -5,12 +5,16 @@
 
 // Includes
 #include <math.h>
-
+#include <AS5048A.h> 
+// the sensor CSn pin is connected to pin 10 
+AS5048A angleSensor(10); 
 
 
 // Pin declares
-int pwmPin = 5; // PWM output pin for motor 1
-int dirPin = 8; // direction output pin for motor 1
+int pwmPinR = 5; // PWM output pin for motor 
+int dirPinR = 8; // direction output pin for motor 
+int pwmPinL = 6; // PWM output pin for motor 
+int dirPinL = 7; // direction output pin for motor 
 int sensorPosPin = A4; // input pin for MR sensor
 int fsrPin = A3; // input pin for FSR sensor
 
@@ -30,6 +34,22 @@ boolean flipped = false;
 double OFFSET = 980;
 double OFFSET_NEG = 15;
 
+// Position tracking variables Hall effect sensor
+long updatedPosHE = 0; // latest processed value of the Hall Effect sensor
+int rawPosHE = 0;         // current raw reading from MR sensor
+int lastRawPosHE = 0;     // last raw reading from MR sensor
+int lastLastRawPosHE = 0; // last last raw reading from MR sensor
+int flipNumberHE = 0;     // keeps track of the number of flips over the 180deg mark
+int tempOffsetHE = 0;
+int rawDiffHE = 0;
+int lastRawDiffHE = 0;
+int rawOffsetHE = 0;
+int lastRawOffsetHE = 0;
+const int flipThreshHE = 16000;  // threshold to determine whether or not a flip over the 180 degree mark occurred
+boolean flippedHE = false;
+double OFFSETHE = 16000;
+double OFFSET_NEGHE = 15;
+
 // Kinematics variables
 double xh = 0;           // position of the handle [m]
 
@@ -45,28 +65,44 @@ unsigned int output = 0;    // output command to the motor
 // --------------------------------------------------------------
 void setup() 
 {
+
+  angleSensor.init(); 
+  
   // Set up serial communication
   Serial.begin(115200);
   
   // Set PWM frequency 
-  setPwmFrequency(pwmPin,1); 
+  setPwmFrequency(pwmPinR,1); 
   
   // Input pins
   pinMode(sensorPosPin, INPUT); // set MR sensor pin to be an input
   pinMode(fsrPin, INPUT);       // set FSR sensor pin to be an input
 
   // Output pins
-  pinMode(pwmPin, OUTPUT);  // PWM pin for motor A
-  pinMode(dirPin, OUTPUT);  // dir pin for motor A
+  pinMode(pwmPinR, OUTPUT);  // PWM pin for motor 
+  pinMode(dirPinR, OUTPUT);  // dir pin for motor 
+
+    // Output pins
+  pinMode(pwmPinL, OUTPUT);  // PWM pin for motor 
+  pinMode(dirPinL, OUTPUT);  // dir pin for motor 
   
   // Initialize motor 
-  analogWrite(pwmPin, 0);     // set to not be spinning (0/255)
-  digitalWrite(dirPin, LOW);  // set direction
+  analogWrite(pwmPinR, 0);     // set to not be spinning (0/255)
+  digitalWrite(dirPinR, LOW);  // set direction
+
+  // Initialize motor 
+  analogWrite(pwmPinL, 0);     // set to not be spinning (0/255)
+  digitalWrite(dirPinL, LOW);  // set direction
   
   // Initialize position valiables
   lastLastRawPos = analogRead(sensorPosPin);
   lastRawPos = analogRead(sensorPosPin);
   flipNumber = 0;
+
+  // Initialize position variables 
+  angleSensor.getRawRotation(); // take reading in case first reading is spurious 
+  lastLastRawPosHE = angleSensor.getRawRotation(); //position from Hall Effect sensor 
+  lastRawPosHE = angleSensor.getRawRotation(); //position from Hall Effect sensor
 }
 
 
@@ -106,6 +142,37 @@ void loop()
   }
    updatedPos = rawPos + flipNumber*OFFSET; // need to update pos based on what most recent offset is 
 
+
+  //*************************************************************
+  //*** Section 1. Compute position in counts (do not change) ***  
+  //*************************************************************
+  
+  // Get angle output by Hall Effect sensor 
+  rawPosHE = int(angleSensor.getRawRotation()); //position from Hall Effect sensor 
+
+    // Calculate differences between subsequent MR sensor readings
+  rawDiffHE = rawPosHE - lastRawPosHE;          //difference btwn current raw position and last raw position
+  lastRawDiffHE = rawPosHE - lastLastRawPosHE;  //difference btwn current raw position and last last raw position
+  rawOffsetHE = abs(rawDiffHE);
+  lastRawOffsetHE = abs(lastRawDiffHE);
+  
+  // Update position record-keeping vairables
+  lastLastRawPosHE = lastRawPosHE;
+  lastRawPosHE = rawPosHE;
+  
+  // Keep track of flips over 180 degrees
+  if((lastRawOffsetHE > flipThreshHE) && (!flippedHE)) { // enter this anytime the last offset is greater than the flip threshold AND it has not just flipped
+    if(lastRawDiffHE > 0) {        // check to see which direction the drive wheel was turning
+      flipNumberHE--;              // cw rotation 
+    } else {                     // if(rawDiff < 0)
+      flipNumberHE++;              // ccw rotation
+    }
+    flippedHE = true;            // set boolean so that the next time through the loop won't trigger a flip
+  } else {                        // anytime no flip has occurred
+    flippedHE = false;
+  }
+   updatedPosHE = rawPosHE + flipNumberHE*OFFSETHE; // need to update pos based on what most recent offset is 
+
  
   //*************************************************************
   //*** Section 2. Compute position in meters *******************
@@ -115,15 +182,12 @@ void loop()
   // Define kinematic parameters you may need
      //double rh = ?;   //[m]
   // Step B.1: print updatedPos via serial monitor
-  //Serial.println((float)updatedPos,5);
+  Serial.println((float)updatedPosHE,5);
   // Step B.6: double ts = ?; // Compute the angle of the sector pulley (ts) in degrees based on updatedPos
   double ts = updatedPos*-0.011+151.9;
-  Serial.println((float)ts,5);
+  //Serial.println((float)ts,5);
   // Step B.7: xh = ?;       // Compute the position of the handle (in meters) based on ts (in radians)
   // Step B.8: print xh via serial monitor
-  // @cal angle 841tiks
-  // 135deg = 1534tiks;
-  // 90deg = 5608tiks; 
     
   
   //*************************************************************
@@ -132,8 +196,7 @@ void loop()
  
   // ADD YOUR CODE HERE
   // Define kinematic parameters you may need
-     //double rp = ?;   //[m]
-     //double rs = ?;   //[m] 
+  
   // Step C.1: force = ?; // You can  generate a force by assigning this to a constant number (in Newtons) or use a haptic rendering / virtual environment
   // Step C.2: Tp = ?;    // Compute the require motor pulley torque (Tp) to generate that force using kinematics
  
@@ -143,9 +206,9 @@ void loop()
   
   // Determine correct direction for motor torque
   if(force > 0) { 
-    digitalWrite(dirPin, HIGH);
+    digitalWrite(dirPinR, HIGH);
   } else {
-    digitalWrite(dirPin, LOW);
+    digitalWrite(dirPinR, LOW);
   }
 
   // Compute the duty cycle required to generate Tp (torque at the motor pulley)
@@ -158,7 +221,7 @@ void loop()
     duty = 0;
   }  
   output = (int)(duty* 255);   // convert duty cycle to output signal
-  analogWrite(pwmPin,output);  // output the signal
+  analogWrite(pwmPinR,output);  // output the signal
 }
 
 // --------------------------------------------------------------
