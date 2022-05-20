@@ -12,6 +12,7 @@
 int pwmPin = 5; // PWM output pin for motor 1
 int dirPin = 8; // direction output pin for motor 1
 int sensorPosPin = A4; // input pin for MR sensor
+int fsrPin = A3; // input pin for FSR sensor
 
 // Position tracking variables
 int updatedPos = 0;     // keeps track of the latest updated value of the MR sensor reading
@@ -117,6 +118,7 @@ void loop()
   // Step B.6: double ts = ?; // Compute the angle of the sector pulley (ts) in degrees based on updatedPos
   // Step B.7: xh = ?;       // Compute the position of the handle (in meters) based on ts (in radians)
   // Step B.8: print xh via serial monitor
+    Serial.println((float)updatedPos,5);
   
   //*************************************************************
   //*** Section 3. Assign a motor output force in Newtons *******  
