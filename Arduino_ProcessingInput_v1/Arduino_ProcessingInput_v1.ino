@@ -114,10 +114,13 @@ void setup()
     }
   }
 
+  clayIndexClosest = 0;
+  clayIndexNext = 1;
+
   Serial.println(clayIndexNext);
 
   xmass[clayIndexClosest] = 50; //150
-  ymass[clayIndexClosest] = 50; //0
+  ymass[clayIndexClosest] = 150; //0
 
   xmass[clayIndexNext] = 150; //50
   ymass[clayIndexNext] = 50; //100 
@@ -172,6 +175,21 @@ void setup()
             
   }  
 
+ ///****Calculate force on the user****///
+
+  //unit vector perpendicular to line components
+  float unitDirectionY = ( ymass[slopeHigherIndex] - ymass[slopeLowerIndex] ) / sqrt(xLineWeight*xLineWeight + yLineWeight*yLineWeight); 
+  ardprintf("%f, %f", ymass[slopeHigherIndex] , ymass[slopeLowerIndex]);
+  float unitDirectionX = ( xmass[slopeHigherIndex] - xmass[slopeLowerIndex] ) / sqrt(xLineWeight*xLineWeight + yLineWeight*yLineWeight);
+
+  ardprintf("%f, %f", unitDirectionX , unitDirectionY);
+  ardprintf("%f, %f", sqrt(xLineWeight*xLineWeight + yLineWeight*yLineWeight), lengthBetween);
+
+  //force at handle, if no contact found userForceMag will be 0 
+  double forceX = - userForceMag * unitDirectionY; //need multiply by negative unitDirectionY weight to have the user direction point OUT of the clay
+  double forceY = userForceMag * unitDirectionX;
+  ardprintf("%f, %f, %f", unitDirectionX, forceX, forceY); 
+ 
  ///****Calculate total force on clay****///
 
     //clay variables refer to each individual block, not the total mass
@@ -204,17 +222,6 @@ void setup()
     //store acceleration and velocity from last time for use this time
     memcpy(accMassPrev, accMass, sizeof(accMassPrev));
     memcpy(velMassPrev, velMass, sizeof(velMassPrev));    
-
-///****Calculate force on the user****///
-
-  //unit vector perpendicular to line components
-  float unitDirectionX = yLineWeight / sqrt(xLineWeight*xLineWeight + yLineWeight*yLineWeight); 
-  float unitDirectionY = xLineWeight / sqrt(xLineWeight*xLineWeight + yLineWeight*yLineWeight);
-
-  //force at handle, if no contact found userForceMag will be 0 
-  double forceX = - userForceMag * unitDirectionY; //need multiply by negative unitDirectionY weight to have the user direction point OUT of the clay
-  double forceY = userForceMag * unitDirectionX;
-  ardprintf("%f, %f, %f", unitDirectionX, forceX, forceY);
    
 }
 
