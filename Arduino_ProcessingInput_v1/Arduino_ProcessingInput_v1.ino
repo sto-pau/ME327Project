@@ -15,7 +15,7 @@ float unitsDivisor = 1000.0;
 //workspace setup
 const float lengthWorkspace = 198.0 / unitsDivisor; //usable work length
 const int points = 10; //number of points to be used (needs to be constant to initialize arrays)
-const float lengthBetween = lengthWorkspace / (points - 2); //distance between points
+const float lengthBetween = lengthWorkspace / (points - 1); //distance between points
 const float startingDepth = 125 / unitsDivisor; //thickness of clay block when starting
 
 //function prototypes here (not needed for arduino?)
@@ -56,19 +56,16 @@ int mSStart = 0;
 // Setup function -- NO NEED TO EDIT
 // --------------------------------------------------------------
 void setup() 
-{
-  
+{  
   InitializeYmass(&ymass[0],startingDepth);
   InitializeXmass(&xmass[0]);
   
   Serial.begin(9600);
 
-
-  xUser = lengthWorkspace / 2;
+  xUser = lengthWorkspace / 2 + 0.05;
   Serial.println(xUser,3);
   PrintArray(ymass);
   PrintArray(xmass);
-  Serial.println(xUser); 
   memcpy(xdiffUserMass, xmass, sizeof(xdiffUserMass));
   AddValue(xdiffUserMass, -xUser);
   PrintArray(xdiffUserMass);
@@ -76,6 +73,14 @@ void setup()
   clayIndexClosest = indexMin(xdiffUserMass);
   Serial.println(clayIndexClosest);
 
+  if (xUser > xmass[clayIndexClosest]){ //or could be if xdiffUserMass[clayIndexClosest] < 0
+    clayIndexNext = clayIndexClosest + 1;
+  }
+  else{
+    clayIndexNext = clayIndexClosest - 1;
+  }
+
+  Serial.println(clayIndexNext);
 }
 
 // --------------------------------------------------------------
@@ -177,24 +182,24 @@ void loop()
 }
 
 void InitializeXmass(float xmass[]){
-  for (int index = 1; index < points - 1; xmass[index] += xmass[index-1] + lengthBetween, index++){}
+  for (int index = 1; index < points; xmass[index] += xmass[index-1] + lengthBetween, index++){}
   return;
 }
 
 
 void InitializeYmass(float ymass[], const float startingDepth){
-  for (int index = 0; index < points - 1; ymass[index] = startingDepth, index++){}
+  for (int index = 0; index < points; ymass[index] = startingDepth, index++){}
   return;
 }
 
 void AddValue(float targetArray[], float val2add){
-  for (int index = 0; index < points - 1; targetArray[index] += val2add, index++){}
+  for (int index = 0; index < points; targetArray[index] += val2add, index++){}
   return;
 }
 
 void PrintArray(float printArray[]){  
   Serial.print("\n");
-  for (int index = 0; index < points - 1 ; index++){
+  for (int index = 0; index < points; index++){
     Serial.print(printArray[index],3);
     Serial.print(" ");
     }
