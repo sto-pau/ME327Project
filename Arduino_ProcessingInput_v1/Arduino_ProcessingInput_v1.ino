@@ -74,7 +74,7 @@ void setup()
   //xUser = xmass[points - 1] + 0.05; //<xUser, yUser> = < -(xPos - 55), ypos + 89.8 > 
   Serial.println(xUser,6);
 
-  if (xUser <= xmass[0]){
+  if (xUser <= xmass[0]){//handle case if xUser is = or surpasses min/max xMass
     xUser = xmass[0];
   }
   else if (xUser >= xmass[points - 1]){
@@ -85,7 +85,8 @@ void setup()
 
   ///****Collision Detection Setup****///
   
-  float xdiffUserMass[points] = {0};
+  //find which two points will be affected
+  float xdiffUserMass[points] = {0}; //array containing difference between user position and all clay positions
   
   memcpy(xdiffUserMass, xmass, sizeof(xdiffUserMass));
   
@@ -94,11 +95,12 @@ void setup()
 
   int clayIndexClosest = points + 1; //should start as impossible index
 
-  clayIndexClosest = indexMin(xdiffUserMass);
+  clayIndexClosest = indexMin(xdiffUserMass); //choose the clay element to interact with as the element with minimum xdiffUserMass 
   Serial.println(clayIndexClosest);
 
   int clayIndexNext = points + 1; //should start as impossible index
-  
+
+  //find 2nd element depending on if  xUser  > or < xMass
   if (xUser > xmass[clayIndexClosest]){ // inequality could be if xdiffUserMass[clayIndexClosest] <= 0 
     clayIndexNext = clayIndexClosest + 1;
   }
@@ -128,7 +130,9 @@ void setup()
   //17.68 //17.68
 
   Serial.println(clayIndexNext);
-
+  
+  //find penetration distance
+  
   //line equations
   int slopeLowerIndex = min(clayIndexClosest, clayIndexNext);
   Serial.println(slopeLowerIndex);
@@ -149,7 +153,8 @@ void setup()
   xUser = 60;
   yUser = 25;
 
-  float yOnLineUser = - ( (xLineWeight * xUser + lineConstant) / yLineWeight );
+  //determine if there is penetration by finding the depth at the user height to be on the line
+  float yOnLineUser = - ( (xLineWeight * xUser + lineConstant) / yLineWeight ); //if depth is not less than this, then not inside the line
   Serial.println(yOnLineUser);
 
   ///****Test Collision and Set userForce onto the clay accordingly****///
@@ -186,14 +191,13 @@ void setup()
   ardprintf("%f, %f", sqrt(xLineWeight*xLineWeight + yLineWeight*yLineWeight), lengthBetween);
 
   //force at handle, if no contact found userForceMag will be 0 
+  //force applied to the User should be perpendicular to the line
   double forceX = - userForceMag * unitDirectionY; //need multiply by negative unitDirectionY weight to have the user direction point OUT of the clay
   double forceY = userForceMag * unitDirectionX;
   ardprintf("%f, %f, %f", unitDirectionX, forceX, forceY); 
  
  ///****Calculate total force on clay****///
-
-    //clay variables refer to each individual block, not the total mass
-    
+ 
     UpdateClaySpringForce(&claySpringForce[0], &ymass[0]);
     PrintArray(ymass);
     PrintArray(claySpringForce);
@@ -207,6 +211,7 @@ void setup()
 
  ///****Calculate resulting motion****///
 
+ //update all the masses velocities, accelerations, and forces
     //calculate acceleration from F = ma
     UpdateClayAccelerations(clayTotalForce, accMass);
     PrintArray(accMass);    
@@ -239,80 +244,7 @@ void loop()
 
 #ifdef DEBUGGING
 
-//find which two points will be affected
-    //array containing difference between user position and all clay positions
-
-    //choose the clay element to interact with as
-    //the element with minimum xdiffUserMass //function that gets minimum value
-
-    //find 2nd element depending on if  xUser  > or < xMass
-
-
-//calculate user applied force NOTE: There are no Fy forces on the MASSES because they do not translate up and down
-//the reaction force on the user WILL have Fy forces
-    //FUserx1 = k * d * abs( xUser - x1 ) / lengthBetween) ) + b * vXUser * abs( xUser - x1 ) / lengthBetween) )
-    //FUserx2 = k * d * abs( xUser - x2 ) / lengthBetween) ) + b * vXUser * abs( xUser - x1 ) / lengthBetween) )
-
-
-//calculate current xmass position
-
-//find penetration distance 
-    //calculate line equation
-        //ax + by + c = 0
-            //a = y1 - y2
-            //b = x2 - x1
-            //c = (x1 - x2) * y1 + (y2 - y1) * x1
-    //calculate normal distance
-        //d = abs ( a * xuser + b * yuser + c) / sqrt( a^2 + b^2 )
-
-  
-  //forces
-  //Serial.println((xh - xmass), 5);
-  if( (xh - xmass) > 0 ){//user applied force
-    userForce = kUser * ((float)xh - xmass);
-  }
-  else{
-  userForce = 0;
-  }
-  
-  springForce = -k * (xmass - springEqX); //spring force
-  //println(springForce);
-    
-  dampForce = -b * velMass; //dampner force  
-  
-  accMass = (userForce + springForce + dampForce) / mass; // calculate accleration from sum forces and mass
-  //println(accMass);
-  
-  //change in time
-  
-  //float seconds = ( millis() - mSStart ) / (64 * 1000.0); // ; //divide by 64 to account for motor prescalar 
-  //Serial.print(seconds,5);
-  //Serial.print(",");
-//  Serial.print(millis()/64,5);
-//  Serial.print(",");
-//  Serial.println(mSStart/64,5);
-
-  //mSStart = millis(); //for next time
-//  if (seconds <= 0.01){
-//    seconds = seconds;
-//  }
-//  else{
-//    seconds = 0.01;
-//  }
-    
-  velMass = velMass + ( 0.5 * (accMassPrev + accMass) * (1.0 / 1000.0) ); //NOTE loop time estimation taken from arduino starter code 0.001;
-  xmass = xmass + ( 0.5 * (velMassPrev + velMass) * (1.0 / 1000.0));
-  
-  //store acceleration and velocity from last time for use this time
-  accMassPrev = accMass;
-  velMassPrev = velMass;
-
-  Serial.print(xh,5);
-  Serial.print(",");
-  Serial.print(xmass,5);
-  Serial.print(",");
-  Serial.println(force,5);
-  //Serial.println(xmass,5);
+/
 
 #endif
 
@@ -322,6 +254,8 @@ void loop()
   //T[T1 T2] =  J.transpose(dx3, dy3, dth1, dth4) * Force[Fx Fy];
  
 }
+
+///****Function****///
 
 void InitializeXmass(float xmass[]){
   for (int index = 1; index < points; xmass[index] += xmass[index-1] + lengthBetween, index++){}
