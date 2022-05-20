@@ -182,10 +182,14 @@ void loop()
   // Define kinematic parameters you may need
      //double rh = ?;   //[m]
   // Step B.1: print updatedPos via serial monitor
-  Serial.println((float)updatedPosHE,5);
+  //Serial.println((float)updatedPosHE,5);
+  //Serial.println((float)updatedPos,5);
   // Step B.6: double ts = ?; // Compute the angle of the sector pulley (ts) in degrees based on updatedPos
-  double ts = updatedPos*-0.011+151.9;
-  //Serial.println((float)ts,5);
+  double ts5 = (PI/180)*(updatedPos*-0.0129+155.5);
+  double ts1 = (PI/180)*(updatedPosHE*0.001470+38.09);
+//  Serial.print((float)ts5,5);
+//  Serial.print("\t");
+//  Serial.println((float)ts1,5);
   // Step B.7: xh = ?;       // Compute the position of the handle (in meters) based on ts (in radians)
   // Step B.8: print xh via serial monitor
     
