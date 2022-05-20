@@ -69,7 +69,6 @@ void setup()
   
   PrintArray(ymass);
   PrintArray(xmass);
-
   
   ///****Recieve User Information****///
   
@@ -120,10 +119,10 @@ void setup()
   Serial.println(clayIndexNext);
 
   xmass[clayIndexClosest] = 50; //150
-  ymass[clayIndexClosest] = 100; //0
+  ymass[clayIndexClosest] = 50; //0
 
   xmass[clayIndexNext] = 150; //50
-  ymass[clayIndexNext] = 0; //100 
+  ymass[clayIndexNext] = 50; //100 
 
   //17.68 //17.68
 
@@ -146,25 +145,28 @@ void setup()
 
   ardprintf("%f, %f, %f", xLineWeight, yLineWeight, lineConstant);
 
-  xUser = 75;
-  yUser = 50;
+  xUser = 100;
+  yUser = 51;
 
   float yOnLineUser = - ( (xLineWeight * xUser + lineConstant) / yLineWeight );
   Serial.println(yOnLineUser);
+
+  float d = abs ( xLineWeight * xUser + yLineWeight * yUser  + lineConstant ) / sqrt(xLineWeight*xLineWeight + yLineWeight*yLineWeight); //penetration distance
+  Serial.println(d);
 
   ///****Test Collision and Set userForce onto the clay accordingly****///
 
   //initialize userForce as all zeroes before proving contact was made
   float userForce[points] = {0};
 
-  if (yUser < yOnLineUser){ //if there is contact, set the adjacent clay userForce not to zero  
-    
-      float d = abs ( xLineWeight * xUser + yLineWeight * yUser  + lineConstant ) / sqrt(xLineWeight*xLineWeight + yLineWeight*yLineWeight); //penetration distance
-      Serial.println(d);
-      userForce[clayIndexClosest] = kUser* d * abs( ( xUser - xmass[clayIndexClosest] ) / lengthBetween );
-      userForce[clayIndexNext] = kUser * d * abs( ( xUser - xmass[clayIndexNext] ) / lengthBetween );
-            
-  }
+//  if (yUser < yOnLineUser){ //if there is contact, set the adjacent clay userForce not to zero  
+//    
+//      float d = abs ( xLineWeight * xUser + yLineWeight * yUser  + lineConstant ) / sqrt(xLineWeight*xLineWeight + yLineWeight*yLineWeight); //penetration distance
+//      Serial.println(d);
+//      userForce[clayIndexClosest] = kUser* d * abs( ( xUser - xmass[clayIndexClosest] ) / lengthBetween );
+//      userForce[clayIndexNext] = kUser * d * abs( ( xUser - xmass[clayIndexNext] ) / lengthBetween );
+//            
+//  }
 
  ///****Calculate total force on clay****///
 
