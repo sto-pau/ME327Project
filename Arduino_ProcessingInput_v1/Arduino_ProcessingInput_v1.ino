@@ -45,7 +45,7 @@ float clayDampForce[points] = {0.0};
 float clayTotalForce[points] = {0.0};
 
 float kUser = 1000.0;
-float bClay = 300.0;
+float bClay = 150.0;
 float kClay = 0.0;
 float massClay = 2.0;
   
@@ -93,8 +93,6 @@ void loop()
 
 #ifdef DEBUGGING
 
-  PrintArray(ymass);
-
 ///****Recieve User Information****///
   
   xUser = xmass[1] - 0.05;
@@ -138,6 +136,13 @@ void loop()
   }   
 
   ///****Send User Information and Clay Information over Serial to Processing****///
+
+  SendArrayOverSerial(xmass);
+  SendArrayOverSerial(ymass);
+  Serial.print(xUser,3);
+  Serial.print(",");
+  Serial.print(yUser,3);
+  Serial.println();  
 
   ///****Collision Detection Setup****///
   
@@ -320,11 +325,18 @@ void IntegratePrevious(float velMass[], float accMass[], float accMassPrev[], fl
 
 void PrintArray(float printArray[]){  
   for (int index = 0; index < points; index++){
-    Serial.print(printArray[index],6);
-    Serial.print(" ");
-    } 
-  
+    Serial.print(printArray[index],3);
+    Serial.print(", ");
+    }   
   Serial.println();
+  return;    
+}
+
+void SendArrayOverSerial(float printArray[]){  
+  for (int index = 0; index < points; index++){
+    Serial.print(printArray[index],3);
+    Serial.print(",");
+    }   
   return;    
 }
 
