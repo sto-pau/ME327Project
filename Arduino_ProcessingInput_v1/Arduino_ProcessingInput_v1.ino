@@ -29,8 +29,7 @@ float yUser = 0.0;
 float xUser = 0.0;
 float dyUser = 0.0;
 
-// Force output variables
-double force = 0.0;           // force at the handle
+// Force & Torque output variables
 double Tp = 0.0;              // torque of the motor pulley
 
 //mass spring dampners system 
@@ -150,23 +149,24 @@ void setup()
   float yOnLineUser = - ( (xLineWeight * xUser + lineConstant) / yLineWeight );
   Serial.println(yOnLineUser);
 
-  float d = abs ( xLineWeight * xUser + yLineWeight * yUser  + lineConstant ) / sqrt(xLineWeight*xLineWeight + yLineWeight*yLineWeight); //penetration distance
-  Serial.println(d);
-
   ///****Test Collision and Set userForce onto the clay accordingly****///
 
   //initialize userForce as all zeroes before proving contact was made
   float userForce[points] = {0.0};
+  float userForceMag = 0.0; //if no contact found forceX and forceY should be 0
 
   if (yUser < yOnLineUser){ //if there is contact, set the adjacent clay userForce not to zero  
 
     //force calculation variables
-      float kUser = 1000.0;
-    
+         
       float d = abs ( xLineWeight * xUser + yLineWeight * yUser  + lineConstant ) / sqrt(xLineWeight*xLineWeight + yLineWeight*yLineWeight); //penetration distance
       Serial.println(d);
-      userForce[clayIndexClosest] = -kUser* d * abs( ( xUser - xmass[clayIndexClosest] ) / lengthBetween ); //need to add negative such that clay is being pushed inwards
-      userForce[clayIndexNext] = -kUser * d * abs( ( xUser - xmass[clayIndexNext] ) / lengthBetween ); //see above
+      
+      float kUser = 1000.0;
+      userForceMag = kUser * d; 
+      
+      userForce[clayIndexClosest] = -userForceMag * abs( ( xUser - xmass[clayIndexClosest] ) / lengthBetween ); //need to add negative such that clay is being pushed inwards
+      userForce[clayIndexNext] = -userForceMag * d * abs( ( xUser - xmass[clayIndexNext] ) / lengthBetween ); //see above
 
       PrintArray(userForce);
             
@@ -207,6 +207,14 @@ void setup()
 
 ///****Calculate force on the user****///
 
+  //unit vector perpendicular to line components
+  float unitDirectionX = yLineWeight / sqrt(xLineWeight*xLineWeight + yLineWeight*yLineWeight); 
+  float unitDirectionY = xLineWeight / sqrt(xLineWeight*xLineWeight + yLineWeight*yLineWeight);
+
+  //force at handle, if no contact found userForceMag will be 0 
+  double forceX = - userForceMag * unitDirectionY; //need multiply by negative unitDirectionY weight to have the user direction point OUT of the clay
+  double forceY = userForceMag * unitDirectionX;
+  ardprintf("%f, %f, %f", unitDirectionX, forceX, forceY);
    
 }
 
