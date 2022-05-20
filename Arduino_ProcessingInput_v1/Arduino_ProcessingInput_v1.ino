@@ -184,6 +184,9 @@ void setup()
     UpdateClayDampForce(&clayDampForce[0], &velMass[0]);
     PrintArray(clayDampForce);
 
+    UpdateTotalForce(clayTotalForce,clayDampForce,claySpringForce,userForce);
+    PrintArray(clayTotalForce);    
+
  ///****Calculate resulting motion****///
 
  float massClay = 2.0;
@@ -318,6 +321,13 @@ void UpdateClayDampForce(float clayDampForce[], float velMass[]){
   float bClay = 10.0;
   for (int index = 0; index < points; index++){    
     clayDampForce[index] = -bClay * velMass[index];          
+  }  
+ return;
+}
+
+void UpdateTotalForce(float clayTotalForce[], float clayDampForce[], float claySpringForce[], float userForce[]){
+  for (int index = 0; index < points; index++){    
+    clayTotalForce[index] = clayDampForce[index] + claySpringForce[index] + userForce[index];           
   }  
  return;
 }
