@@ -2,6 +2,13 @@
 // Code to test basic Hapkit functionality (sensing and force output)
 // Updated by Allison Okamura 1.17.2018
 //--------------------------------------------------------------------------
+// Parameters that define what environment to render
+#define ENABLE_MASS_SPRING_DAMP 
+
+#define DEBUGGING 
+#define TESTING 
+
+#define ARDBUFFER 16 //for serial line printing
 
 // Includes
 #include <math.h>
@@ -10,6 +17,7 @@
 AS5048A angleSensor(10); 
 
 // generate constants
+float unitsDivisor = 1000.0; 
 double a1 = 129; //mm
 double a2 = 152; //mm
 double a3 = 152; //mm
@@ -88,7 +96,40 @@ double TpL = 0;              // torque of the motor pulley
 double duty = 0;            // duty cylce (between 0 and 255)
 unsigned int output = 0;    // output command to the motor
 
+//workspace setup
+const float lengthWorkspace = 193.0 / unitsDivisor; //usable work length
+const int points = 4; //number of points to be used (needs to be constant to initialize arrays)
+const float lengthBetween = lengthWorkspace / (points - 1); //distance between points
+const float startingDepth = 125.0 / unitsDivisor; //thickness of clay block when starting
 
+// Kinematics variables
+float yUser = 0.0;
+float xUser = 0.0;
+float dyUser = 0.0;
+
+//mass spring dampners system 
+//position variables
+float ymass[points] = {0.0}; //based on x & y axis of pantograph
+float xmass[points] = {0.0}; //based on x & y axis of pantograph
+
+//force calculation
+float claySpringForce[points] = {0.0};
+float clayDampForce[points] = {0.0};
+float clayTotalForce[points] = {0.0};
+
+float kUser = 1000.0;
+float bClay = 150.0;
+float kClay = 0.0;
+float massClay = 2.0;
+
+//change in position variables
+float velMass[points] = {0.0};
+float accMass[points] = {0.0};
+float velMassPrev[points] =  {0.0};
+float accMassPrev[points] =  {0.0};
+
+//calculating loop time
+int mSStart = 0;
 // --------------------------------------------------------------
 // Setup function -- NO NEED TO EDIT
 // --------------------------------------------------------------
@@ -132,7 +173,15 @@ void setup()
   angleSensor.getRawRotation(); // take reading in case first reading is spurious 
   lastLastRawPosHE = angleSensor.getRawRotation(); //position from Hall Effect sensor 
   lastRawPosHE = angleSensor.getRawRotation(); //position from Hall Effect sensor
-}
+
+  //setup virtual enviroment
+  SetAllElements(&ymass[0],startingDepth);
+  InitializeXmass(&xmass[0]);
+  //  Serial.println("Starting Arrays ymass xmass");
+  //  PrintArray(ymass);
+  //  PrintArray(xmass);
+  
+}// end of setup loop
 
 
 // --------------------------------------------------------------
@@ -265,6 +314,9 @@ void loop()
 
   xh = P3x;
   yh = P3y;
+  //Serial.print((float)xh,3);
+  //Serial.print(" : ");
+  //Serial.println((float)yh,3);
 
   //rename define for convenience
   double d = P42_norm;
@@ -299,9 +351,9 @@ void loop()
   double dxh = d1x3*dtheta1 + d5x3*dtheta5;
   double dyh = d1y3*dtheta1 + d5x3*dtheta5; 
   //calculate torque from force 
-  Serial.print((float)dxh,3);
-  Serial.print(" : ");
-  Serial.println((float)dyh,3);
+  //Serial.print((float)dxh,3);
+  //Serial.print(" : ");
+  //Serial.println((float)dyh,3);
 
   //*************************************************************
   //*** Section 3. Assign a motor output force in Newtons *******  
@@ -369,4 +421,153 @@ void setPwmFrequency(int pin, int divisor) {
     }
     TCCR2B = TCCR2B & 0b11111000 | mode;
   }
+}
+
+///****Function****///
+
+//special for intializing the x values of the clay
+void InitializeXmass(float xmass[]){
+  for (int index = 1; index < points; xmass[index] += xmass[index-1] + lengthBetween, index++){}
+  return;
+}
+
+//set all the elemts of an array to a single value
+void SetAllElements(float ymass[], const float startingDepth){
+  for (int index = 0; index < points; ymass[index] = startingDepth, index++){}
+  return;
+}
+
+//add a float value to every element in an array
+void AddValue(float targetArray[], float val2add){
+  for (int index = 0; index < points; targetArray[index] += val2add, index++){}
+  return;
+}
+
+//update the clay spring force on all clay points
+void UpdateClaySpringForce(float claySpringForce[], float ymass[]){
+  for (int index = 0; index < points; index++){    
+    claySpringForce[index] = kClay * (ymass[index] - startingDepth);  //no negative sign so that the clay resists OUTWARDS, positive Y direction     
+  }  
+ return;
+}
+
+//update the clay dampening force on all clay points
+void UpdateClayDampForce(float clayDampForce[], float velMass[]){
+  for (int index = 0; index < points; index++){    
+    clayDampForce[index] = -bClay * velMass[index];          
+  }  
+ return;
+}
+
+//update the total force on all the clay points, each seperate component force has to be updated before running this
+void UpdateTotalForce(float clayTotalForce[], float clayDampForce[], float claySpringForce[], float userForce[]){
+  for (int index = 0; index < points; index++){    
+    clayTotalForce[index] = clayDampForce[index] + claySpringForce[index] + userForce[index];           
+  }  
+ return;
+}
+
+//update all the accelerations for all the clay points, clayTotalForce has to be updated before running this
+void UpdateClayAccelerations(float clayTotalForce[], float accMass[]){
+  
+  for (int index = 0; index < points; index++){    
+    accMass[index] = clayTotalForce[index] / massClay;           
+  }  
+ return;
+ 
+}
+
+//solve for a variable by integrating its derivative
+void IntegratePrevious(float velMass[], float accMass[], float accMassPrev[], float loopTime){
+  //for position integration yMass, velMass, vellMassPrev
+  
+  for (int index = 0; index < points; index++){    
+    velMass[index] = velMass[index] + ( 0.5 * (accMassPrev[index] + accMass[index]) * (loopTime) ); //NOTE loop time estimation taken from arduino starter code 0.001;           
+  } 
+   
+ return;
+ 
+}
+
+//print an entire array over serial
+void PrintArray(float printArray[]){  
+  for (int index = 0; index < points; index++){
+    Serial.print(printArray[index],3);
+    Serial.print(", ");
+    }   
+  Serial.println();
+  return;    
+}
+
+//send an entire array over serial to Processing (needs special delinators)
+void SendArrayOverSerial(float printArray[]){  
+  for (int index = 0; index < points; index++){
+    Serial.print(printArray[index],3);
+    Serial.print(",");
+    }   
+  return;    
+}
+
+//find the index of the minimum value in an array
+int indexMin(float targetArray[]){
+  
+    int minIndex = 0; //have to create outside forloop to pass it out
+    
+    for(int currentIndex = 1; currentIndex < points; currentIndex++){        
+        if(abs(targetArray[currentIndex]) < abs(targetArray[minIndex]))
+          minIndex = currentIndex;           
+    }
+    return minIndex;
+}
+
+//A printf function for serial communication from Arduino boards
+//example syntax is ardprintf("test %d %l %c %s %f", l, k, s, j, f);
+//https://arduino.stackexchange.com/questions/176/how-do-i-print-multiple-variables-in-a-string
+
+int ardprintf(char *str, ...)
+{
+  int i, count=0, j=0, flag=0;
+  char temp[ARDBUFFER+1];
+  for(i=0; str[i]!='\0';i++)  if(str[i]=='%')  count++;
+
+  va_list argv;
+  va_start(argv, count);
+  for(i=0,j=0; str[i]!='\0';i++)
+  {
+    if(str[i]=='%')
+    {
+      temp[j] = '\0';
+      Serial.print(temp);
+      j=0;
+      temp[0] = '\0';
+
+      switch(str[++i])
+      {
+        case 'd': Serial.print(va_arg(argv, int));
+                  break;
+        case 'l': Serial.print(va_arg(argv, long));
+                  break;
+        case 'f': Serial.print(va_arg(argv, double));
+                  break;
+        case 'c': Serial.print((char)va_arg(argv, int));
+                  break;
+        case 's': Serial.print(va_arg(argv, char *));
+                  break;
+        default:  ;
+      };
+    }
+    else 
+    {
+      temp[j] = str[i];
+      j = (j+1)%ARDBUFFER;
+      if(j==0) 
+      {
+        temp[ARDBUFFER] = '\0';
+        Serial.print(temp);
+        temp[0]='\0';
+      }
+    }
+  };
+  Serial.println();
+  return count + 1;
 }
