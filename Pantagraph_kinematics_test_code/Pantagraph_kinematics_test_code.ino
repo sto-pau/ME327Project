@@ -56,21 +56,33 @@ boolean flippedHE = false;
 double OFFSETHE = 16000;
 double OFFSET_NEGHE = 15;
 
-// Kinematics variables
-double xh = 0;           // position of the handle [m]
+// Kinematics 
+//variables 
+double xh = 0;
 double yh = 0;
-double xh_prev;          // Distance of the handle at previous time step
-double yh_prev;
-double dxh;              // Velocity of the handle
-double dyh;
-double dxh_prev;
-double dyh_prev;
+double dxh = 0;
+double dyh = 0;
+
+//theta 1
+double theta1 = 0;
+double theta1_prev;
+double theta1_prev2;
+double dtheta1;
+double dtheta1_prev;
+double dtheta1_prev2;
+// theta 5
+double theta5 = 0;
+double theta5_prev;
+double theta5_prev2;
+double dtheta5;
+double dtheta5_prev;
+double dtheta5_prev2;
 
 // Force output variables
-double forcex = 0;           // force at the handle
+double force = 0;           // force at the handle
 double forcey = 0;
 
-double TpR = 0;              // torque of the motor pulley
+double Tp = 0;              // torque of the motor pulley
 double TpL = 0;              // torque of the motor pulley
 
 double duty = 0;            // duty cylce (between 0 and 255)
@@ -204,38 +216,58 @@ void loop()
   // Step B.6: double ts = ?; // Compute the angle of the sector pulley (ts) in degrees based on updatedPos
   double theta5 = (PI/180)*(updatedPos*-0.0129+155.5);
   double theta1 = (PI/180)*(updatedPosHE*0.001470+38.09);
-  //  Serial.print((float)ts5,5);
-  //  Serial.print("\t");
-  //  Serial.println((float)ts1,5);
+//  Serial.print((float)theta5,5);
+//  Serial.print("\t");
+//  Serial.print((float)theta1,5);
   // Step B.7: xh = ?;       // Compute the position of the handle (in meters) based on ts (in radians)
   // Step B.8: print xh via serial monitor
+
+  // Calculate velocity with loop time estimation
+  dtheta1 = (double)(theta1 - theta1_prev) / 0.001;
+  // Record the position and velocity
+  theta1_prev2 = theta1_prev;
+  theta1_prev = theta1;
+  theta1_prev2 = theta1_prev;
+  theta1_prev = theta1;
+
+  // Calculate velocity with loop time estimation
+  dtheta5 = (double)(theta5 - theta5_prev) / 0.001;
+  // Record the position and velocity
+  theta5_prev2 = theta5_prev;
+  theta5_prev = theta5;
+  theta5_prev2 = theta5_prev;
+  theta5_prev = theta5;
+
+//  Serial.print("\t");
+//  Serial.print((float)dtheta5,5);
+//  Serial.print("\t");
+//  Serial.println((float)dtheta1,5);
   
   //calculate positions 2 and 4
   double P2x = a1*cos(theta1);
   double P2y = a1*sin(theta1);
   double P4x = a4*cos(theta5) - a5;
-  double P4y = -a4*sin(theta5);
+  double P4y = a4*sin(theta5);
+
+
+  
   // calculate norms
   double P42_norm = sqrt((P2x-P4x)*(P2x-P4x)+(P2y-P4y)*(P2y-P4y));
   double P2h_norm = (a2*a2 - a3*a3 + P42_norm*P42_norm)/(2*P42_norm);
-  double P24_norm = sqrt((P4x-P2x)*(P4x-P2x)+(P4y-P2y)*(P4y-P2y));
   double P3h_norm = sqrt(a2*a2 - P2h_norm*P2h_norm);
-  // calculate position h
-  double Phx = P2x + (P2h_norm/P24_norm)*P42_norm;
-  double Phy = P2y + (P2h_norm/P24_norm)*P42_norm;
-  // calculate position 3
-  double P3x = Phx + (P3h_norm/P24_norm)*(P4y-P2y);
-  double P3y = Phy - (P3h_norm/P24_norm)*(P4x-P2x);
 
-  Serial.print((float)P3x,5);
-  Serial.print("\t");
-  Serial.println((float)P3y,5);
+  // calculate position h
+  double Phx = P2x + (P2h_norm/P42_norm)*(P4x-P2x);
+  double Phy = P2y + (P2h_norm/P42_norm)*(P4y-P2y);
+  // calculate position 3
+  double P3x = Phx + (P3h_norm/P42_norm)*(P4y-P2y);
+  double P3y = Phy - (P3h_norm/P42_norm)*(P4x-P2x);
 
   xh = P3x;
   yh = P3y;
-  
+
   //rename define for convenience
-  double d = P24_norm;
+  double d = P42_norm;
   double b = P2h_norm;
   double h = P3h_norm;
   // calculate partial derivatives
@@ -264,10 +296,13 @@ void loop()
   double d5x3 = d5xh + (h/d)*(d5y4 - d5y2) + (d5h*d - d5d*h)/(d*d)*(P4y - P2y);
   double d5y3 = d5yh + (h/d)*(d5x4 - d5x2) + (d5h*d - d5d*h)/(d*d)*(P4x - P2x);
   //calculate velocity from omega (dTheta{i})
-  double Vx = d1x3*dTheta1 + d5x3*dTheta5;
-  double Vy = d1y3*dTheta1 + d5x3*dTheta5; 
+  double dxh = d1x3*dtheta1 + d5x3*dtheta5;
+  double dyh = d1y3*dtheta1 + d5x3*dtheta5; 
   //calculate torque from force 
-  
+  Serial.print((float)dxh,3);
+  Serial.print(" : ");
+  Serial.println((float)dyh,3);
+
   //*************************************************************
   //*** Section 3. Assign a motor output force in Newtons *******  
   //*************************************************************
