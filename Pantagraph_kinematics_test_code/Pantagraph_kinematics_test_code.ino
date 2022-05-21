@@ -9,6 +9,12 @@
 // the sensor CSn pin is connected to pin 10 
 AS5048A angleSensor(10); 
 
+// generate constants
+double a1 = 129; //mm
+double a2 = 152; //mm
+double a3 = 152; //mm
+double a4 = 129; //mm
+double a5 = 82; //mm
 
 // Pin declares
 int pwmPinR = 5; // PWM output pin for motor 
@@ -52,10 +58,21 @@ double OFFSET_NEGHE = 15;
 
 // Kinematics variables
 double xh = 0;           // position of the handle [m]
+double yh = 0;
+double xh_prev;          // Distance of the handle at previous time step
+double yh_prev;
+double dxh;              // Velocity of the handle
+double dyh;
+double dxh_prev;
+double dyh_prev;
 
 // Force output variables
-double force = 0;           // force at the handle
-double Tp = 0;              // torque of the motor pulley
+double forcex = 0;           // force at the handle
+double forcey = 0;
+
+double TpR = 0;              // torque of the motor pulley
+double TpL = 0;              // torque of the motor pulley
+
 double duty = 0;            // duty cylce (between 0 and 255)
 unsigned int output = 0;    // output command to the motor
 
@@ -185,14 +202,71 @@ void loop()
   //Serial.println((float)updatedPosHE,5);
   //Serial.println((float)updatedPos,5);
   // Step B.6: double ts = ?; // Compute the angle of the sector pulley (ts) in degrees based on updatedPos
-  double ts5 = (PI/180)*(updatedPos*-0.0129+155.5);
-  double ts1 = (PI/180)*(updatedPosHE*0.001470+38.09);
-//  Serial.print((float)ts5,5);
-//  Serial.print("\t");
-//  Serial.println((float)ts1,5);
+  double theta5 = (PI/180)*(updatedPos*-0.0129+155.5);
+  double theta1 = (PI/180)*(updatedPosHE*0.001470+38.09);
+  //  Serial.print((float)ts5,5);
+  //  Serial.print("\t");
+  //  Serial.println((float)ts1,5);
   // Step B.7: xh = ?;       // Compute the position of the handle (in meters) based on ts (in radians)
   // Step B.8: print xh via serial monitor
-    
+  
+  //calculate positions 2 and 4
+  double P2x = a1*cos(theta1);
+  double P2y = a1*sin(theta1);
+  double P4x = a4*cos(theta5) - a5;
+  double P4y = -a4*sin(theta5);
+  // calculate norms
+  double P42_norm = sqrt((P2x-P4x)*(P2x-P4x)+(P2y-P4y)*(P2y-P4y));
+  double P2h_norm = (a2*a2 - a3*a3 + P42_norm*P42_norm)/(2*P42_norm);
+  double P24_norm = sqrt((P4x-P2x)*(P4x-P2x)+(P4y-P2y)*(P4y-P2y));
+  double P3h_norm = sqrt(a2*a2 - P2h_norm*P2h_norm);
+  // calculate position h
+  double Phx = P2x + (P2h_norm/P24_norm)*P42_norm;
+  double Phy = P2y + (P2h_norm/P24_norm)*P42_norm;
+  // calculate position 3
+  double P3x = Phx + (P3h_norm/P24_norm)*(P4y-P2y);
+  double P3y = Phy - (P3h_norm/P24_norm)*(P4x-P2x);
+
+  Serial.print((float)P3x,5);
+  Serial.print("\t");
+  Serial.println((float)P3y,5);
+
+  xh = P3x;
+  yh = P3y;
+  
+  //rename define for convenience
+  double d = P24_norm;
+  double b = P2h_norm;
+  double h = P3h_norm;
+  // calculate partial derivatives
+  // d1 partial derivatives
+  double d1x2 = -a1*sin(theta1);
+  double d1y2 = a1*cos(theta1);
+  double d1y4 = 0;
+  double d1x4 = 0;
+  double d1d = ( (P4x-P2x)*(d1x4-d1x2) + (P4y-P2y)*(d1y4-d1y2 ))/d;
+  double d1b = d1d - ( d1d*(a2*a2 - a3*a3 + d*d))/(2*d*d);
+  double d1h = -b*d1b/h;
+  double d1yh = d1y2 + ( (d1b*d - d1d*b)/(d*d) )*(P4y-P2y)+(b/d)*(d1y4-d1y2);
+  double d1xh = d1x2+( (d1b*d-d1b*d)/(d*d) )*(P4x-P2x)+(b/d)*(d1x4-d1x2);
+  double d1x3 = d1xh + (h/d)*(d1y4 - d1y2) + (d1h*d - d1d*h)/(d*d)*(P4y - P2y);
+  double d1y3 = d1yh + (h/d)*(d1x4 - d1x2) + (d1h*d - d1d*h)/(d*d)*(P4x - P2x);
+  // d5 partial derivatives
+  double d5x4 = -a4*sin(theta5);
+  double d5y4 = a4*cos(theta5);
+  double d5y2 = 0;
+  double d5x2 = 0;
+  double d5d = ( (P4x-P2x)*(d5x4-d5x2) + (P4y-P2y)*(d5y4-d5y2) )/d;
+  double d5b = d5d - ( d5d*(a2*a2 - a3*a3 + d*d))/(2*d*d);
+  double d5h = -b*d1b/h;
+  double d5yh = d5y2 + ( (d5b*d - d5d*b)/(d*d) )*(P4y-P2y)+(b/d)*(d5y4-d5y2);
+  double d5xh = d5x2+( (d5b*d-d5b*d)/(d*d) )*(P4x-P2x)+(b/d)*(d5x4-d5x2);;
+  double d5x3 = d5xh + (h/d)*(d5y4 - d5y2) + (d5h*d - d5d*h)/(d*d)*(P4y - P2y);
+  double d5y3 = d5yh + (h/d)*(d5x4 - d5x2) + (d5h*d - d5d*h)/(d*d)*(P4x - P2x);
+  //calculate velocity from omega (dTheta{i})
+  double Vx = d1x3*dTheta1 + d5x3*dTheta5;
+  double Vy = d1y3*dTheta1 + d5x3*dTheta5; 
+  //calculate torque from force 
   
   //*************************************************************
   //*** Section 3. Assign a motor output force in Newtons *******  
