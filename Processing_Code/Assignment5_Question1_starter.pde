@@ -43,7 +43,7 @@ float yMapMax = 200;
 float spaceBuffer = 10;
 
 // array to store point positions
-int numPoints = 10;
+int numPoints = 4;
 float[][] points;
 // handle coordinates
 float rawXh;
@@ -59,8 +59,8 @@ void setup () {
   points = new float[numPoints][2];
   // populate points
   for (int i = 0; i < numPoints; i += 1){
-    points[i][0] = (i+1) * height/(numPoints+1);
-    points[i][1] = width - 200;
+    points[i][0] = width - 200;
+    points[i][1] = (i+1) * height/(numPoints+1);
   }
 
   // List all the available serial ports
@@ -86,6 +86,7 @@ void draw () {
   ellipse(xh, yh, 30, 30);
   // draw points for pottery
   for (int i = 0; i < numPoints; i += 1) {
+    stroke(200);
     point(points[i][0], points[i][1]);
   }
 }
@@ -110,8 +111,8 @@ void serialEvent (Serial myPort) {
     xh = map(rawXh, xMin, xMax, xMapMin, xMapMax);  // x handle position
     yh = map(rawYh, yMin, yMax, yMapMin, yMapMax);  // y handle position
     points[idx1][0] = map(newX1, xMin, xMax, xMapMin, xMapMax-spaceBuffer);  // first point x, TODO: check if mapping correct
-    points[idx1][1] = map(newY1, yMin, yMax, yMapMin, yMapMax);  // first point y
+    //points[idx1][1] = map(newY1, yMin, yMax, yMapMin, yMapMax);  // first point y
     points[idx2][0] = map(newX2, xMin, xMax, xMapMin, xMapMax-spaceBuffer);  // first point x
-    points[idx2][1] = map(newY2, yMin, yMax, yMapMin, yMapMax);  // first point y
+    //points[idx2][1] = map(newY2, yMin, yMax, yMapMin, yMapMax);  // first point y
   }
 }
