@@ -3,7 +3,8 @@
 // Updated by Allison Okamura 1.17.2018
 //--------------------------------------------------------------------------
 // Parameters that define what environment to render
-#define ENABLE_MASS_SPRING_DAMP 
+//#define ENABLE_MASS_SPRING_DAMP 
+bool ENABLE_MASS_SPRING_DAMP = false;
 
 #define DEBUGGING 
 //#define TESTING 
@@ -191,6 +192,9 @@ int doNotPrintEveryTime = 0;
 // --------------------------------------------------------------
 // Main Loop
 // --------------------------------------------------------------
+
+unsigned long mainLoopStart = millis();
+
 void loop()
 {
   doNotPrintEveryTime++;
@@ -265,10 +269,10 @@ void loop()
   // Define kinematic parameters you may need
      //double rh = ?;   //[m]
   // Step B.1: print updatedPos via serial monitor
- if( doNotPrintEveryTime % (10) == 0 ){
-  //Serial.println(rawPosHE);
-  //Serial.println(updatedPos);
- }
+// if( doNotPrintEveryTime % (10) == 0 ){
+//  Serial.println(rawPosHE);
+//  //Serial.println(updatedPos);
+// }
   //Serial.println((float)updatedPos,5);
   // Step B.6: double ts = ?; // Compute the angle of the sector pulley (ts) in degrees based on updatedPos
   double theta5 = (PI/180)*(updatedPos*-0.0129+155.5);
@@ -277,7 +281,7 @@ void loop()
 //  Serial.print(" ");
 ////  Serial.print("\t");
 //  Serial.print(theta1,5);
-//  Serial.print(" ");
+//  Serial.println(" ");
   // Step B.7: xh = ?;       // Compute the position of the handle (in meters) based on ts (in radians)
   // Step B.8: print xh via serial monitor
 
@@ -368,197 +372,211 @@ void loop()
   //*** Assign a motor output force in Newtons ******************  
   //*************************************************************
 
-#ifdef ENABLE_MASS_SPRING_DAMP
+//for now, wait until in position before starting rendering
+if ( (millis()- mainLoopStart)/64 >= 1000*10){
+  ENABLE_MASS_SPRING_DAMP = true;
+}
 
-///****Recieve User Information****///
+if (ENABLE_MASS_SPRING_DAMP == true){
 
-#ifdef DEBUGGING
-
-  xUser = - (xh - (-9)) / unitsDivisor; //xh and yh are in mm, virtual enviroment is in m
-  yUser = (yh - 220) / unitsDivisor;
-
-  Serial.print((float)xh,3);
-  Serial.print(" : ");
-  Serial.print((float)yh,3);
-  Serial.print(" , ");
-  Serial.print((float)xUser,3);
-  Serial.print(" : ");
-  Serial.println((float)yUser,3);  
-
-#endif //DEBUGGING  
-
-#ifdef TESTING
-
-  xUser = xmass[1] - 0.05;
-  //xUser = xmass[points - 1] + 0.05; //<xUser, yUser> = < -(xPos - 55), ypos + 89.8 > 
-
-  yUser = startingDepth;
-
-  int loopingRate = 500;
-
-  if (loopNumber <= loopingRate){
-
+  ///****Recieve User Information****///
+  
+  #ifdef DEBUGGING
+  
+    xUser = - (xh - (-9)) / unitsDivisor; //xh and yh are in mm, virtual enviroment is in m
+    yUser = (yh - 220) / unitsDivisor;
+  
+  #endif //DEBUGGING  
+  
+  #ifdef TESTING
+  
     xUser = xmass[1] - 0.05;
-    yUser = ymass[1] - (25.5 / unitsDivisor);
-    loopNumber++;
+    //xUser = xmass[points - 1] + 0.05; //<xUser, yUser> = < -(xPos - 55), ypos + 89.8 > 
+  
+    yUser = startingDepth;
+  
+    int loopingRate = 500;
+  
+    if (loopNumber <= loopingRate){
+  
+      xUser = xmass[1] - 0.05;
+      yUser = ymass[1] - (25.5 / unitsDivisor);
+      loopNumber++;
+      
+    }  
+  //  else if (loopNumber <= 2 * loopingRate){
+  //
+  //    xUser = xmass[2] - 0.02;
+  //    yUser = ymass[2] - (12.5 / unitsDivisor);
+  //    loopNumber++;
+  //    
+  //  }
+  //   else if (loopNumber <= 3 * loopingRate){
+  //
+  //    xUser = xmass[3] - 0.01;
+  //    yUser = ymass[3] - (12.5 / unitsDivisor);
+  //    loopNumber++;
+  //    
+  //  }
     
-  }  
-//  else if (loopNumber <= 2 * loopingRate){
-//
-//    xUser = xmass[2] - 0.02;
-//    yUser = ymass[2] - (12.5 / unitsDivisor);
-//    loopNumber++;
-//    
-//  }
-//   else if (loopNumber <= 3 * loopingRate){
-//
-//    xUser = xmass[3] - 0.01;
-//    yUser = ymass[3] - (12.5 / unitsDivisor);
-//    loopNumber++;
-//    
-//  }
+  #endif //TESTING
   
-#endif //TESTING
-
-  if (xUser <= xmass[0]){//handle case if xUser is = or surpasses min/max xMass
-    xUser = xmass[0];
-  }
-  else if (xUser >= xmass[points - 1]){
-      xUser = xmass[points - 1];
-  }   
-
-  ///****Collision Detection Setup****///
+    if (xUser <= xmass[0]){//handle case if xUser is = or surpasses min/max xMass
+      xUser = xmass[0];
+    }
+    else if (xUser >= xmass[points - 1]){
+        xUser = xmass[points - 1];
+    }   
   
-  //find which two points will be affected
-  float xdiffUserMass[points] = {0}; //array containing difference between user position and all clay positions
+    ///****Collision Detection Setup****///
+    
+    //find which two points will be affected
+    float xdiffUserMass[points] = {0}; //array containing difference between user position and all clay positions
+    
+    memcpy(xdiffUserMass, xmass, sizeof(xdiffUserMass));
+    
+    AddValue(xdiffUserMass, -xUser);
   
-  memcpy(xdiffUserMass, xmass, sizeof(xdiffUserMass));
+    int clayIndexClosest = points + 1; //should start as impossible index
   
-  AddValue(xdiffUserMass, -xUser);
-
-  int clayIndexClosest = points + 1; //should start as impossible index
-
-  clayIndexClosest = indexMin(xdiffUserMass); //choose the clay element to interact with as the element with minimum xdiffUserMass 
-
-  int clayIndexNext = points + 1; //should start as impossible index
-
-  //find 2nd element depending on if  xUser  > or < xMass
-  if (xUser > xmass[clayIndexClosest]){ // inequality could be if xdiffUserMass[clayIndexClosest] <= 0 
-    clayIndexNext = clayIndexClosest + 1;
-  }
-  else if (xUser < xmass[clayIndexClosest]){
-    clayIndexNext = clayIndexClosest - 1;
-  }
-  else if (xUser == xmass[clayIndexClosest]){//if equal, check if at top or bottom
-    if(clayIndexClosest == 0){
+    clayIndexClosest = indexMin(xdiffUserMass); //choose the clay element to interact with as the element with minimum xdiffUserMass 
+  
+    int clayIndexNext = points + 1; //should start as impossible index
+  
+    //find 2nd element depending on if  xUser  > or < xMass
+    if (xUser > xmass[clayIndexClosest]){ // inequality could be if xdiffUserMass[clayIndexClosest] <= 0 
       clayIndexNext = clayIndexClosest + 1;
     }
-    else if( clayIndexClosest == (points - 1) ){
-        clayIndexNext = clayIndexClosest - 1;
+    else if (xUser < xmass[clayIndexClosest]){
+      clayIndexNext = clayIndexClosest - 1;
     }
-  }
+    else if (xUser == xmass[clayIndexClosest]){//if equal, check if at top or bottom
+      if(clayIndexClosest == 0){
+        clayIndexNext = clayIndexClosest + 1;
+      }
+      else if( clayIndexClosest == (points - 1) ){
+          clayIndexNext = clayIndexClosest - 1;
+      }
+    }
+    
+    //find penetration distance
+    
+    //line equations
+    int slopeLowerIndex = min(clayIndexClosest, clayIndexNext);
+    
+    int slopeHigherIndex = max(clayIndexClosest, clayIndexNext);
   
-  //find penetration distance
+    float xLineWeight = 0.0;
+    float yLineWeight = 0.0;
+    float lineConstant = 0.0;
+    
+    yLineWeight = xmass[slopeHigherIndex] - xmass[slopeLowerIndex]; //b 
+    xLineWeight = ymass[slopeLowerIndex] - ymass[slopeHigherIndex]; //a
+    lineConstant = xmass[slopeLowerIndex] * ymass[slopeHigherIndex] - ymass[slopeLowerIndex] * xmass[slopeHigherIndex]; //c
   
-  //line equations
-  int slopeLowerIndex = min(clayIndexClosest, clayIndexNext);
+    //determine if there is penetration by finding the depth at the user height to be on the line
+    float yOnLineUser = - ( (xLineWeight * xUser + lineConstant) / yLineWeight ); //if depth is not less than this, then not inside the line
   
-  int slopeHigherIndex = max(clayIndexClosest, clayIndexNext);
-
-  float xLineWeight = 0.0;
-  float yLineWeight = 0.0;
-  float lineConstant = 0.0;
+    ///****Test Collision and Set userForce onto the clay accordingly****///
   
-  yLineWeight = xmass[slopeHigherIndex] - xmass[slopeLowerIndex]; //b 
-  xLineWeight = ymass[slopeLowerIndex] - ymass[slopeHigherIndex]; //a
-  lineConstant = xmass[slopeLowerIndex] * ymass[slopeHigherIndex] - ymass[slopeLowerIndex] * xmass[slopeHigherIndex]; //c
-
-  //determine if there is penetration by finding the depth at the user height to be on the line
-  float yOnLineUser = - ( (xLineWeight * xUser + lineConstant) / yLineWeight ); //if depth is not less than this, then not inside the line
-
-  ///****Test Collision and Set userForce onto the clay accordingly****///
-
-  //initialize userForce as all zeroes before proving contact was made
-  float userForce[points] = {0.0};
-  float userForceMag = 0.0; //if no contact found forceX and forceY should be 0
-
-  if (yUser < yOnLineUser){ //if there is contact, set the adjacent clay userForce not to zero  
-
-    //force calculation variables 
-      
-      float d = abs ( xLineWeight * xUser + yLineWeight * yUser  + lineConstant ) / sqrt(xLineWeight*xLineWeight + yLineWeight*yLineWeight); //penetration distance
-      
-      userForceMag = kUser * d; 
-      
-      userForce[clayIndexClosest] = -userForceMag * abs( ( xUser - xmass[clayIndexClosest] ) / lengthBetween ); //need to add negative such that clay is being pushed inwards
-      userForce[clayIndexNext] = -userForceMag * d * abs( ( xUser - xmass[clayIndexNext] ) / lengthBetween ); //see above
-            
-  }  
-
- ///****Calculate force on the user****///
-
-  //unit vector perpendicular to line components
-  float unitDirectionY = ( ymass[slopeHigherIndex] - ymass[slopeLowerIndex] ) / sqrt(xLineWeight*xLineWeight + yLineWeight*yLineWeight); 
-  float unitDirectionX = ( xmass[slopeHigherIndex] - xmass[slopeLowerIndex] ) / sqrt(xLineWeight*xLineWeight + yLineWeight*yLineWeight);
-
-  //force at handle, if no contact found userForceMag will be 0 
-  //force applied to the User should be perpendicular to the line
-  double forceX = - userForceMag * unitDirectionY; //need multiply by negative unitDirectionY weight to have the user direction point OUT of the clay
-  double forceY = userForceMag * unitDirectionX;
- 
- ///****Calculate total force on clay****///
- 
-    UpdateClaySpringForce(&claySpringForce[0], &ymass[0]); //spring force
-
-    UpdateClayDampForce(&clayDampForce[0], &velMass[0]);//dampner force
-
-    UpdateTotalForce(clayTotalForce,clayDampForce,claySpringForce,userForce); //total force  
-
- ///****Calculate resulting motion****///
-
- //update all the masses velocities, accelerations, and forces
-    //calculate acceleration from F = ma
-    UpdateClayAccelerations(clayTotalForce, accMass);   
-
-    //integrate to find velocity and postion
-
-    //change in time
-    float loopTime = (1.0 / 1000.0); //in SECONDS
-
-    //calculated based on actual loop time (may need to use if becomes very slow)
-    unsigned long mSTemp = millis();
-    float milliLoopseconds = ( mSTemp - mSStart ) / (64.0); //divide by 64 to account for motor prescalar IN MILLISECONDS
-    mSStart = mSTemp;
-    //Serial.print("time per loop ");
-    //Serial.println(milliLoopseconds,6);
-
-    IntegratePrevious(velMass,accMass,accMassPrev, loopTime); //integrate for velocity
-    IntegratePrevious(ymass,velMass,velMassPrev, loopTime); //integrate for position  
-
-    //store acceleration and velocity from last time for use this time
-    memcpy(accMassPrev, accMass, sizeof(accMassPrev));
-    memcpy(velMassPrev, velMass, sizeof(velMassPrev));   
-
-    ///****Send User Information and Clay Information over Serial to Processing****///
+    //initialize userForce as all zeroes before proving contact was made
+    float userForce[points] = {0.0};
+    float userForceMag = 0.0; //if no contact found forceX and forceY should be 0
   
-//    Serial.print(clayIndexClosest);
-//    Serial.print(","); 
-//    Serial.print(xmass[clayIndexClosest],6);
-//    Serial.print(",");
-//    Serial.print(ymass[clayIndexClosest],6);
-//    Serial.print(",");
-//    Serial.print(clayIndexNext);
-//    Serial.print(","); 
-//    Serial.print(xmass[clayIndexNext],6);
-//    Serial.print(",");
-//    Serial.print(ymass[clayIndexNext],6);
-//    Serial.print(",");
-//    Serial.print(xUser,6);
-//    Serial.print(",");
-//    Serial.print(yUser,6);
-//    Serial.println(); 
-
-#endif //ENABLE_MASS_SPRING_DAMP  
+    if (yUser < yOnLineUser){ //if there is contact, set the adjacent clay userForce not to zero  
+  
+      //force calculation variables 
+        
+        float d = abs ( xLineWeight * xUser + yLineWeight * yUser  + lineConstant ) / sqrt(xLineWeight*xLineWeight + yLineWeight*yLineWeight); //penetration distance
+        
+        userForceMag = kUser * d; 
+        
+        userForce[clayIndexClosest] = -userForceMag * abs( ( xUser - xmass[clayIndexClosest] ) / lengthBetween ); //need to add negative such that clay is being pushed inwards
+        userForce[clayIndexNext] = -userForceMag * d * abs( ( xUser - xmass[clayIndexNext] ) / lengthBetween ); //see above
+              
+    }  
+  
+   ///****Calculate force on the user****///
+  
+    //unit vector perpendicular to line components
+    float unitDirectionY = ( ymass[slopeHigherIndex] - ymass[slopeLowerIndex] ) / sqrt(xLineWeight*xLineWeight + yLineWeight*yLineWeight); 
+    float unitDirectionX = ( xmass[slopeHigherIndex] - xmass[slopeLowerIndex] ) / sqrt(xLineWeight*xLineWeight + yLineWeight*yLineWeight);
+  
+    //force at handle, if no contact found userForceMag will be 0 
+    //force applied to the User should be perpendicular to the line
+    double forceX = - userForceMag * unitDirectionY; //need multiply by negative unitDirectionY weight to have the user direction point OUT of the clay
+    double forceY = userForceMag * unitDirectionX;
+   
+   ///****Calculate total force on clay****///
+   
+      UpdateClaySpringForce(&claySpringForce[0], &ymass[0]); //spring force
+  
+      UpdateClayDampForce(&clayDampForce[0], &velMass[0]);//dampner force
+  
+      UpdateTotalForce(clayTotalForce,clayDampForce,claySpringForce,userForce); //total force  
+  
+   ///****Calculate resulting motion****///
+  
+   //update all the masses velocities, accelerations, and forces
+      //calculate acceleration from F = ma
+      UpdateClayAccelerations(clayTotalForce, accMass);   
+  
+      //integrate to find velocity and postion
+  
+      //change in time
+      float loopTime = (1.0 / 1000.0); //in SECONDS
+  
+      //calculated based on actual loop time (may need to use if becomes very slow)
+      unsigned long mSTemp = millis();
+      float milliLoopseconds = ( mSTemp - mSStart ) / (64.0); //divide by 64 to account for motor prescalar IN MILLISECONDS
+      mSStart = mSTemp;
+      //Serial.print("time per loop ");
+      //Serial.println(milliLoopseconds,6);
+  
+      IntegratePrevious(velMass,accMass,accMassPrev, loopTime); //integrate for velocity
+      IntegratePrevious(ymass,velMass,velMassPrev, loopTime); //integrate for position  
+  
+      //store acceleration and velocity from last time for use this time
+      memcpy(accMassPrev, accMass, sizeof(accMassPrev));
+      memcpy(velMassPrev, velMass, sizeof(velMassPrev));   
+  
+      ///****Send User Information and Clay Information over Serial to Processing****///
+  
+  //  if( doNotPrintEveryTime % (10) == 0 ){
+  //    Serial.println(rawPosHE);
+  //    //Serial.println(updatedPos);
+  // }
+    
+  //    Serial.print(clayIndexClosest);
+  //    Serial.print(","); 
+  //    Serial.print(xmass[clayIndexClosest],6);
+  //    Serial.print(",");
+  //    Serial.print(ymass[clayIndexClosest],6);
+  //    Serial.print(",");
+  //    Serial.print(clayIndexNext);
+  //    Serial.print(","); 
+  //    Serial.print(xmass[clayIndexNext],6);
+  //    Serial.print(",");
+  //    Serial.print(ymass[clayIndexNext],6);
+  //    Serial.print(",");
+  //    Serial.print(xUser,6);
+  //    Serial.print(",");
+  //    Serial.print(yUser,6);
+  //    Serial.println(); 
+  
+      SendArrayOverSerial(xmass);
+      SendArrayOverSerial(ymass);
+      Serial.print(1000.0 * xUser,0);
+      Serial.print(",");
+      Serial.print(1000.0 * yUser,0);
+      Serial.println(); 
+  //    Serial.print(" "); 
+  //    Serial.print(xh,5);
+  //    Serial.print(",");
+  //    Serial.print(yh,5);
+  //    
+    
+}//#endif //ENABLE_MASS_SPRING_DAMP  
  
   // ADD YOUR CODE HERE
   // Define kinematic parameters you may need
@@ -703,7 +721,7 @@ void PrintArray(float printArray[]){
 //send an entire array over serial to Processing (needs special delinators)
 void SendArrayOverSerial(float printArray[]){  
   for (int index = 0; index < points; index++){
-    Serial.print(printArray[index],3);
+    Serial.print(1000.0 * printArray[index],0);
     Serial.print(",");
     }   
   return;    
