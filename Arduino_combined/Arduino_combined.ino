@@ -6,8 +6,8 @@
 //#define ENABLE_MASS_SPRING_DAMP 
 bool ENABLE_MASS_SPRING_DAMP = false;
 
-#define DEBUGGING 
-//#define TESTING 
+//#define DEBUGGING 
+#define TESTING 
 
 #define ARDBUFFER 16 //for serial line printing
 
@@ -119,7 +119,7 @@ float clayDampForce[points] = {0.0};
 float clayTotalForce[points] = {0.0};
 
 float kUser = 1000.0;
-float bClay = 150.0;
+float bClay = 50.0;
 float kClay = 0.0;
 float massClay = 2.0;
 
@@ -140,7 +140,7 @@ void setup()
   angleSensor.init(); 
   
   // Set up serial communication
-  Serial.begin(115200);
+  Serial.begin(9600);
   
   // Set PWM frequency 
   setPwmFrequency(pwmPinR,1); 
@@ -373,7 +373,7 @@ void loop()
   //*************************************************************
 
 //for now, wait until in position before starting rendering
-if ( (millis()- mainLoopStart)/64 >= 1000*10){
+if ( (millis()- mainLoopStart)/64 >= 1000*0){
   ENABLE_MASS_SPRING_DAMP = true;
 }
 
@@ -390,8 +390,8 @@ if (ENABLE_MASS_SPRING_DAMP == true){
   
   #ifdef TESTING
   
-    xUser = xmass[1] - 0.05;
-    //xUser = xmass[points - 1] + 0.05; //<xUser, yUser> = < -(xPos - 55), ypos + 89.8 > 
+   // xUser = xmass[0] - 0.05; //below min
+    xUser = xmass[points - 1] - 0.005; //above max
   
     yUser = startingDepth;
   
@@ -399,25 +399,11 @@ if (ENABLE_MASS_SPRING_DAMP == true){
   
     if (loopNumber <= loopingRate){
   
-      xUser = xmass[1] - 0.05;
-      yUser = ymass[1] - (25.5 / unitsDivisor);
+      xUser = xmass[points - 1] - 0.005;
+      yUser = ymass[points - 1] - (25.5 / unitsDivisor);
       loopNumber++;
       
     }  
-  //  else if (loopNumber <= 2 * loopingRate){
-  //
-  //    xUser = xmass[2] - 0.02;
-  //    yUser = ymass[2] - (12.5 / unitsDivisor);
-  //    loopNumber++;
-  //    
-  //  }
-  //   else if (loopNumber <= 3 * loopingRate){
-  //
-  //    xUser = xmass[3] - 0.01;
-  //    yUser = ymass[3] - (12.5 / unitsDivisor);
-  //    loopNumber++;
-  //    
-  //  }
     
   #endif //TESTING
   
@@ -442,6 +428,8 @@ if (ENABLE_MASS_SPRING_DAMP == true){
     clayIndexClosest = indexMin(xdiffUserMass); //choose the clay element to interact with as the element with minimum xdiffUserMass 
   
     int clayIndexNext = points + 1; //should start as impossible index
+
+    
   
     //find 2nd element depending on if  xUser  > or < xMass
     if (xUser > xmass[clayIndexClosest]){ // inequality could be if xdiffUserMass[clayIndexClosest] <= 0 
@@ -488,11 +476,17 @@ if (ENABLE_MASS_SPRING_DAMP == true){
       //force calculation variables 
         
         float d = abs ( xLineWeight * xUser + yLineWeight * yUser  + lineConstant ) / sqrt(xLineWeight*xLineWeight + yLineWeight*yLineWeight); //penetration distance
+
+        Serial.print("d");
+        Serial.println(d);
+        ardprintf("d xLineWeight yLineWeight lineConstant %f %d %d %d", d, xLineWeight, yLineWeight, lineConstant);
         
         userForceMag = kUser * d; 
         
-        userForce[clayIndexClosest] = -userForceMag * abs( ( xUser - xmass[clayIndexClosest] ) / lengthBetween ); //need to add negative such that clay is being pushed inwards
-        userForce[clayIndexNext] = -userForceMag * d * abs( ( xUser - xmass[clayIndexNext] ) / lengthBetween ); //see above
+        userForce[clayIndexClosest] = -userForceMag * abs( ( xUser - xmass[clayIndexNext] ) / lengthBetween ); //need to add negative such that clay is being pushed inwards
+        userForce[clayIndexNext] = -userForceMag * abs( ( xUser - xmass[clayIndexClosest] ) / lengthBetween ); //see above
+
+        ardprintf("d userForceMag userForce[clayIndexClosest] userForce[clayIndexNext] %f %f %f %f", d, userForceMag, userForce[clayIndexClosest], userForce[clayIndexNext]);
               
     }  
   
