@@ -6,7 +6,7 @@
 #define ENABLE_MASS_SPRING_DAMP 
 
 #define DEBUGGING 
-#define TESTING 
+//#define TESTING 
 
 #define ARDBUFFER 16 //for serial line printing
 
@@ -129,7 +129,7 @@ float velMassPrev[points] =  {0.0};
 float accMassPrev[points] =  {0.0};
 
 //calculating loop time
-int mSStart = 0;
+unsigned long mSStart = 0;
 // --------------------------------------------------------------
 // Setup function -- NO NEED TO EDIT
 // --------------------------------------------------------------
@@ -139,7 +139,7 @@ void setup()
   angleSensor.init(); 
   
   // Set up serial communication
-  Serial.begin(9600);
+  Serial.begin(115200);
   
   // Set PWM frequency 
   setPwmFrequency(pwmPinR,1); 
@@ -361,16 +361,29 @@ void loop()
 
 #ifdef ENABLE_MASS_SPRING_DAMP
 
+///****Recieve User Information****///
+
 #ifdef DEBUGGING
 
-///****Recieve User Information****///
-  
+  xUser = - (xh - (-9)) / unitsDivisor; //xh and yh are in mm, virtual enviroment is in m
+  yUser = (yh - 220) / unitsDivisor;
+
+//  Serial.print((float)xh,3);
+//  Serial.print(" : ");
+//  Serial.print((float)yh,3);
+//  Serial.print(" , ");
+//  Serial.print((float)xUser,3);
+//  Serial.print(" : ");
+//  Serial.println((float)yUser,3);  
+
+#endif //DEBUGGING  
+
+#ifdef TESTING
+
   xUser = xmass[1] - 0.05;
   //xUser = xmass[points - 1] + 0.05; //<xUser, yUser> = < -(xPos - 55), ypos + 89.8 > 
 
   yUser = startingDepth;
-
-#ifdef TESTING
 
   int loopingRate = 500;
 
@@ -501,12 +514,14 @@ void loop()
     //integrate to find velocity and postion
 
     //change in time
-    float loopTime = (1.0 / 1000.0);
+    float loopTime = (1.0 / 1000.0); //in SECONDS
 
     //calculated based on actual loop time (may need to use if becomes very slow)
-    float mSTemp = millis();
-    float seconds = ( mSTemp - mSStart ) / (64 * 1000.0); //divide by 64 to account for motor prescalar
+    unsigned long mSTemp = millis();
+    float milliLoopseconds = ( mSTemp - mSStart ) / (64.0); //divide by 64 to account for motor prescalar IN MILLISECONDS
     mSStart = mSTemp;
+//    Serial.print("time per loop ");
+    Serial.println(milliLoopseconds,6);
 
     IntegratePrevious(velMass,accMass,accMassPrev, loopTime); //integrate for velocity
     IntegratePrevious(ymass,velMass,velMassPrev, loopTime); //integrate for position  
@@ -533,8 +548,6 @@ void loop()
 //    Serial.print(",");
 //    Serial.print(yUser,6);
 //    Serial.println(); 
-
-#endif //DEBUGGING
 
 #endif //ENABLE_MASS_SPRING_DAMP  
  
