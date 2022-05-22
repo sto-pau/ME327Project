@@ -59,9 +59,9 @@ int rawDiffHE = 0;
 int lastRawDiffHE = 0;
 int rawOffsetHE = 0;
 int lastRawOffsetHE = 0;
-const int flipThreshHE = 16000;  // threshold to determine whether or not a flip over the 180 degree mark occurred
+const int flipThreshHE = 10000;  // threshold to determine whether or not a flip over the 180 degree mark occurred
 boolean flippedHE = false;
-double OFFSETHE = 16000;
+double OFFSETHE = 16300;
 double OFFSET_NEGHE = 15;
 
 // Kinematics 
@@ -97,10 +97,10 @@ double duty = 0;            // duty cylce (between 0 and 255)
 unsigned int output = 0;    // output command to the motor
 
 //workspace setup
-const float lengthWorkspace = 193.0 / unitsDivisor; //usable work length
-const int points = 4; //number of points to be used (needs to be constant to initialize arrays)
+const float lengthWorkspace = 75.0 / unitsDivisor; //usable work length
+const int points = 10; //number of points to be used (needs to be constant to initialize arrays)
 const float lengthBetween = lengthWorkspace / (points - 1); //distance between points
-const float startingDepth = 125.0 / unitsDivisor; //thickness of clay block when starting
+const float startingDepth = 35.0 / unitsDivisor; //thickness of clay block when starting
 
 // Kinematics variables
 float yUser = 0.0;
@@ -185,11 +185,15 @@ void setup()
 
 //for counting loops
 int loopNumber = 0;
+
+//for not printing every time
+int doNotPrintEveryTime = 0;
 // --------------------------------------------------------------
 // Main Loop
 // --------------------------------------------------------------
 void loop()
 {
+  doNotPrintEveryTime++;
   
   //*************************************************************
   //*** Section 1. Compute position in counts (do not change) ***  
@@ -261,14 +265,19 @@ void loop()
   // Define kinematic parameters you may need
      //double rh = ?;   //[m]
   // Step B.1: print updatedPos via serial monitor
-  //Serial.println((float)updatedPosHE,5);
+ if( doNotPrintEveryTime % (10) == 0 ){
+  //Serial.println(rawPosHE);
+  //Serial.println(updatedPos);
+ }
   //Serial.println((float)updatedPos,5);
   // Step B.6: double ts = ?; // Compute the angle of the sector pulley (ts) in degrees based on updatedPos
   double theta5 = (PI/180)*(updatedPos*-0.0129+155.5);
   double theta1 = (PI/180)*(updatedPosHE*0.001470+38.09);
-//  Serial.print((float)theta5,5);
-//  Serial.print("\t");
-//  Serial.print((float)theta1,5);
+//  Serial.print(theta5,5);
+//  Serial.print(" ");
+////  Serial.print("\t");
+//  Serial.print(theta1,5);
+//  Serial.print(" ");
   // Step B.7: xh = ?;       // Compute the position of the handle (in meters) based on ts (in radians)
   // Step B.8: print xh via serial monitor
 
@@ -368,13 +377,13 @@ void loop()
   xUser = - (xh - (-9)) / unitsDivisor; //xh and yh are in mm, virtual enviroment is in m
   yUser = (yh - 220) / unitsDivisor;
 
-//  Serial.print((float)xh,3);
-//  Serial.print(" : ");
-//  Serial.print((float)yh,3);
-//  Serial.print(" , ");
-//  Serial.print((float)xUser,3);
-//  Serial.print(" : ");
-//  Serial.println((float)yUser,3);  
+  Serial.print((float)xh,3);
+  Serial.print(" : ");
+  Serial.print((float)yh,3);
+  Serial.print(" , ");
+  Serial.print((float)xUser,3);
+  Serial.print(" : ");
+  Serial.println((float)yUser,3);  
 
 #endif //DEBUGGING  
 
@@ -520,8 +529,8 @@ void loop()
     unsigned long mSTemp = millis();
     float milliLoopseconds = ( mSTemp - mSStart ) / (64.0); //divide by 64 to account for motor prescalar IN MILLISECONDS
     mSStart = mSTemp;
-//    Serial.print("time per loop ");
-    Serial.println(milliLoopseconds,6);
+    //Serial.print("time per loop ");
+    //Serial.println(milliLoopseconds,6);
 
     IntegratePrevious(velMass,accMass,accMassPrev, loopTime); //integrate for velocity
     IntegratePrevious(ymass,velMass,velMassPrev, loopTime); //integrate for position  
