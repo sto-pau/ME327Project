@@ -82,8 +82,8 @@ double dtheta5_prev2;
 double forceX = 0;           // force at the handle
 double forceY = 0;
 
-double TpR = 0;              // torque of the motor pulley
-double TpL = 0;              // torque of the motor pulley
+double TR = 0;              // torque of the motor pulley
+double TL = 0;              // torque of the motor pulley
 
 double dutyR = 0;            // duty cylce (between 0 and 255)
 unsigned int outputR = 0;    // output command to the motor
@@ -104,6 +104,7 @@ void setup()
 
   // Set PWM frequency
   setPwmFrequency(pwmPinR, 1);
+  setPwmFrequency(pwmPinL, 1);
 
   // Input pins
   pinMode(sensorPosPin, INPUT); // set MR sensor pin to be an input
@@ -283,8 +284,8 @@ void loop()
   double d1h = -b * d1b / h;
   double d1yh = d1y2 + ( (d1b * d - d1d * b) / (d * d) ) * (P4y - P2y) + (b / d) * (d1y4 - d1y2);
   double d1xh = d1x2 + ( (d1b * d - d1b * d) / (d * d) ) * (P4x - P2x) + (b / d) * (d1x4 - d1x2);
+  double d1y3 = d1yh - (h / d) * (d1x4 - d1x2) - (d1h * d - d1d * h) / (d * d) * (P4x - P2x);
   double d1x3 = d1xh + (h / d) * (d1y4 - d1y2) + (d1h * d - d1d * h) / (d * d) * (P4y - P2y);
-  double d1y3 = d1yh + (h / d) * (d1x4 - d1x2) + (d1h * d - d1d * h) / (d * d) * (P4x - P2x);
   // d5 partial derivatives
   double d5x4 = -a4 * sin(theta5);
   double d5y4 = a4 * cos(theta5);
@@ -294,16 +295,16 @@ void loop()
   double d5b = d5d - ( d5d * (a2 * a2 - a3 * a3 + d * d)) / (2 * d * d);
   double d5h = -b * d1b / h;
   double d5yh = d5y2 + ( (d5b * d - d5d * b) / (d * d) ) * (P4y - P2y) + (b / d) * (d5y4 - d5y2);
-  double d5xh = d5x2 + ( (d5b * d - d5b * d) / (d * d) ) * (P4x - P2x) + (b / d) * (d5x4 - d5x2);;
+  double d5xh = d5x2 + ( (d5b * d - d5d * b) / (d * d) ) * (P4x - P2x) + (b / d) * (d5x4 - d5x2);
+  double d5y3 = d5yh - (h / d) * (d5x4 - d5x2) - (d5h * d - d5d * h) / (d * d) * (P4x - P2x);
   double d5x3 = d5xh + (h / d) * (d5y4 - d5y2) + (d5h * d - d5d * h) / (d * d) * (P4y - P2y);
-  double d5y3 = d5yh + (h / d) * (d5x4 - d5x2) + (d5h * d - d5d * h) / (d * d) * (P4x - P2x);
   //calculate velocity from omega (dTheta{i})
   double dxh = d1x3 * dtheta1 + d5x3 * dtheta5;
   double dyh = d1y3 * dtheta1 + d5x3 * dtheta5;
   //calculate torque from force
-  Serial.print((float)dxh, 3);
-  Serial.print(" : ");
-  Serial.println((float)dyh, 3);
+//  Serial.print((float)dxh, 3);
+//  Serial.print(" : ");
+//  Serial.println((float)dyh, 3);
 
   //*************************************************************
   //*** Section 3. Assign a motor output force in Newtons *******
@@ -314,12 +315,16 @@ void loop()
   //VIRTUAL OBJECT HERE
   // calculate forceX
   // calculate forceY
+  forceX = 1;
+  forceY = 0;
   // FORCE SIMULATION HERE
-  TR = d1x3*forceX + d1y3*forceY;
-  TL = d1x5*forceX + d1y5*forceY;
+  TL = d1x3*forceX + d1y3*forceY;
+  TR = d5x3*forceX + d5y3*forceY;
   // Step C.1: force = ?; // You can  generate a force by assigning this to a constant number (in Newtons) or use a haptic rendering / virtual environment
   // Step C.2: Tp = ?;    // Compute the require motor pulley torque (Tp) to generate that force using kinematics
-
+  Serial.print(TR);
+  Serial.print("\t");
+  Serial.println(TL);
   //*************************************************************
   //*** Section 4. Force output (do not change) *****************
   //*************************************************************
