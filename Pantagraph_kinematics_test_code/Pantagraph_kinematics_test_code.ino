@@ -51,9 +51,9 @@ int rawDiffHE = 0;
 int lastRawDiffHE = 0;
 int rawOffsetHE = 0;
 int lastRawOffsetHE = 0;
-const int flipThreshHE = 16000;  // threshold to determine whether or not a flip over the 180 degree mark occurred
+const int flipThreshHE = 10000;  // threshold to determine whether or not a flip over the 180 degree mark occurred
 boolean flippedHE = false;
-double OFFSETHE = 16000;
+double OFFSETHE = 16300;
 double OFFSET_NEGHE = 15;
 
 // Kinematics
@@ -61,7 +61,9 @@ double OFFSET_NEGHE = 15;
 double xh = 0;
 double yh = 0;
 double dxh = 0;
+double dxh_prev = 0;
 double dyh = 0;
+double dyh_prev = 0;
 
 //theta 1
 double theta1 = 0;
@@ -217,8 +219,8 @@ void loop()
   //Serial.println((float)updatedPosHE,5);
   //Serial.println((float)updatedPos,5);
   // Step B.6: double ts = ?; // Compute the angle of the sector pulley (ts) in degrees based on updatedPos
-  double theta5 = (PI / 180) * (updatedPos * -0.0129 + 155.5);
-  double theta1 = (PI / 180) * (updatedPosHE * 0.001470 + 38.09);
+  double theta5 = (PI / 180) * (updatedPos * -0.0129 + 149.5);
+  double theta1 = (PI / 180) * (updatedPosHE * 0.001470 + 16.09);
   //  Serial.print((float)theta5,5);
   //  Serial.print("\t");
   //  Serial.print((float)theta1,5);
@@ -279,11 +281,11 @@ void loop()
   double d1y2 = a1 * cos(theta1);
   double d1y4 = 0;
   double d1x4 = 0;
-  double d1d = ( (P4x - P2x) * (d1x4 - d1x2) + (P4y - P2y) * (d1y4 - d1y2 )) / d;
+  double d1d = ( (P4x - P2x) * (d1x4 - d1x2) + (P4y - P2y) * (d1y4 - d1y2 ) ) / d;
   double d1b = d1d - ( d1d * (a2 * a2 - a3 * a3 + d * d)) / (2 * d * d);
   double d1h = -b * d1b / h;
   double d1yh = d1y2 + ( (d1b * d - d1d * b) / (d * d) ) * (P4y - P2y) + (b / d) * (d1y4 - d1y2);
-  double d1xh = d1x2 + ( (d1b * d - d1b * d) / (d * d) ) * (P4x - P2x) + (b / d) * (d1x4 - d1x2);
+  double d1xh = d1x2 + ( (d1b * d - d1d * b) / (d * d) ) * (P4x - P2x) + (b / d) * (d1x4 - d1x2);
   double d1y3 = d1yh - (h / d) * (d1x4 - d1x2) - (d1h * d - d1d * h) / (d * d) * (P4x - P2x);
   double d1x3 = d1xh + (h / d) * (d1y4 - d1y2) + (d1h * d - d1d * h) / (d * d) * (P4y - P2y);
   // d5 partial derivatives
@@ -293,18 +295,38 @@ void loop()
   double d5x2 = 0;
   double d5d = ( (P4x - P2x) * (d5x4 - d5x2) + (P4y - P2y) * (d5y4 - d5y2) ) / d;
   double d5b = d5d - ( d5d * (a2 * a2 - a3 * a3 + d * d)) / (2 * d * d);
-  double d5h = -b * d1b / h;
+  double d5h = -b * d5b / h;
   double d5yh = d5y2 + ( (d5b * d - d5d * b) / (d * d) ) * (P4y - P2y) + (b / d) * (d5y4 - d5y2);
   double d5xh = d5x2 + ( (d5b * d - d5d * b) / (d * d) ) * (P4x - P2x) + (b / d) * (d5x4 - d5x2);
   double d5y3 = d5yh - (h / d) * (d5x4 - d5x2) - (d5h * d - d5d * h) / (d * d) * (P4x - P2x);
   double d5x3 = d5xh + (h / d) * (d5y4 - d5y2) + (d5h * d - d5d * h) / (d * d) * (P4y - P2y);
   //calculate velocity from omega (dTheta{i})
-  double dxh = d1x3 * dtheta1 + d5x3 * dtheta5;
-  double dyh = d1y3 * dtheta1 + d5x3 * dtheta5;
+  double dxh = (d1x3 * dtheta1 + d5x3 * dtheta5)*0.1+dxh_prev*0.9;
+ 
+  double dyh = (d1y3 * dtheta1 + d5y3 * dtheta5)*0.1+dyh_prev*0.9;
+
+  if (isnan(dxh)){
+    dxh = 0;
+  }
+  
+  if (isnan(dyh)){
+    dyh = 0;
+  }
+  
+  dxh_prev = dxh;
+  dyh_prev = dyh;
+  
   //calculate torque from force
-//  Serial.print((float)dxh, 3);
-//  Serial.print(" : ");
-//  Serial.println((float)dyh, 3);
+  static int  myCount = 0;
+  if (myCount == 100){
+
+    myCount = 0;
+  }
+  else {
+    myCount++;
+  }
+
+
 
   //*************************************************************
   //*** Section 3. Assign a motor output force in Newtons *******
@@ -315,16 +337,30 @@ void loop()
   //VIRTUAL OBJECT HERE
   // calculate forceX
   // calculate forceY
-  forceX = 1;
-  forceY = 0;
+  forceX = 0;
+  forceY = 0.2;
   // FORCE SIMULATION HERE
+//  TL = -1;
+//  TR = -1;
   TL = d1x3*forceX + d1y3*forceY;
   TR = d5x3*forceX + d5y3*forceY;
+
+  if (isnan(TL)){
+    TL = 0;
+  }
+  
+  if (isnan(TR)){
+    TR = 0;
+  }
+  
+  Serial.print(TL,5);
+  Serial.print(" : ");
+  Serial.println(TR,5);
   // Step C.1: force = ?; // You can  generate a force by assigning this to a constant number (in Newtons) or use a haptic rendering / virtual environment
   // Step C.2: Tp = ?;    // Compute the require motor pulley torque (Tp) to generate that force using kinematics
-  Serial.print(TR);
-  Serial.print("\t");
-  Serial.println(TL);
+//  Serial.print(TR);
+//  Serial.print("\t");
+//  Serial.println(TL);
   //*************************************************************
   //*** Section 4. Force output (do not change) *****************
   //*************************************************************
