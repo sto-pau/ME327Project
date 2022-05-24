@@ -105,9 +105,9 @@ unsigned int outputL = 0;    // output command to the motor
 
 //workspace setup
 const float lengthWorkspace = 75.0 / unitsDivisor; //usable work length
-const int points = 10; //number of points to be used (needs to be constant to initialize arrays)
+const int points = 5; //number of points to be used (needs to be constant to initialize arrays)
 const float lengthBetween = lengthWorkspace / (points - 1); //distance between points
-const float startingDepth = 35.0 / unitsDivisor; //thickness of clay block when starting
+const float startingDepth = 60.0 / unitsDivisor; //thickness of clay block when starting
 
 // Kinematics variables
 float yUser = 0.0;
@@ -124,10 +124,10 @@ float claySpringForce[points] = {0.0};
 float clayDampForce[points] = {0.0};
 float clayTotalForce[points] = {0.0};
 
-float kUser = 1000.0;
-float bClay = 50.0;
+float kUser = 100.0;
+float bClay = 1.5;
 float kClay = 0.0;
-float massClay = 2.0;
+float massClay = 1.0;
 
 //change in position variables
 float velMass[points] = {0.0};
@@ -145,7 +145,7 @@ void setup()
   angleSensor.init();
 
   // Set up serial communication
-  Serial.begin(115200);
+  Serial.begin(38400);
 
   // Set PWM frequency
   setPwmFrequency(pwmPinR, 1);
@@ -187,6 +187,9 @@ void setup()
   //  Serial.println("Starting Arrays ymass xmass");
   //  PrintArray(ymass);
   //  PrintArray(xmass);
+
+  //to reset Processing visuals
+  Serial.println("327, 0, 0, 0, 0, 0, 0, 0");
   
 }// end of setup loop
 
@@ -403,8 +406,8 @@ if (ENABLE_MASS_SPRING_DAMP == true){
   
   #ifdef DEBUGGING
   
-    xUser = - (xh - (-9)) / unitsDivisor; //xh and yh are in mm, virtual enviroment is in m
-    yUser = (yh - 220) / unitsDivisor;
+    xUser = - (xh - (-9)) / unitsDivisor; //xh and yh are in mm, virtual enviroment is in m - (xh - (-9))
+    yUser = (yh - 190) / unitsDivisor; //(yh - 220)
   
   #endif //DEBUGGING  
   
@@ -518,7 +521,7 @@ if (ENABLE_MASS_SPRING_DAMP == true){
     double forceClayFrameY = userForceMag * unitDirectionX;
 
     forceX = -forceClayFrameX;
-    forceY = -forceClayFrameY;
+    forceY = forceClayFrameY;
    ///****Calculate total force on clay****///
    
       UpdateClaySpringForce(&claySpringForce[0], &ymass[0]); //spring force
@@ -558,39 +561,45 @@ if (ENABLE_MASS_SPRING_DAMP == true){
   //    Serial.println(rawPosHE);
   //    //Serial.println(updatedPos);
   // }
-    
-  //    Serial.print(clayIndexClosest);
-  //    Serial.print(","); 
-  //    Serial.print(xmass[clayIndexClosest],6);
-  //    Serial.print(",");
-  //    Serial.print(ymass[clayIndexClosest],6);
-  //    Serial.print(",");
-  //    Serial.print(clayIndexNext);
-  //    Serial.print(","); 
-  //    Serial.print(xmass[clayIndexNext],6);
-  //    Serial.print(",");
-  //    Serial.print(ymass[clayIndexNext],6);
-  //    Serial.print(",");
-  //    Serial.print(xUser,6);
-  //    Serial.print(",");
-  //    Serial.print(yUser,6);
-  //    Serial.println(); 
+//    
+
+      if ( !isnan(clayIndexClosest) && !isnan(clayIndexNext) && !isnan(ymass[clayIndexClosest]) && !isnan(xmass[clayIndexClosest])&& 
+      !isnan(ymass[clayIndexNext]) && !isnan(xmass[clayIndexNext]) && !isnan(yUser) && !isnan(xUser) ){   
+        
+        Serial.print(clayIndexClosest);
+        Serial.print(","); 
+        Serial.print(ymass[clayIndexClosest],6);
+        Serial.print(",");
+        Serial.print(xmass[clayIndexClosest],6);
+        Serial.print(",");
+        Serial.print(clayIndexNext);
+        Serial.print(","); 
+        Serial.print(ymass[clayIndexNext],6);
+        Serial.print(",");
+        Serial.print(xmass[clayIndexNext],6);
+        Serial.print(",");
+        Serial.print(yUser,6);
+        Serial.print(",");
+        Serial.print(xUser,6);
+        Serial.println(); 
+        
+      }
   
-      SendArrayOverSerial(xmass);
-      SendArrayOverSerial(ymass);
-      Serial.print(1000.0 * xUser,0);
-      Serial.print(",");
-      Serial.print(1000.0 * yUser,0);
-      Serial.print(",");
-      Serial.print(forceX,0);
-      Serial.print(",");
-      Serial.print(forceY,0);
-      Serial.println(); 
-  //    Serial.print(" "); 
+//      SendArrayOverSerial(xmass);
+//      SendArrayOverSerial(ymass);
+//      Serial.print(1000.0 * xUser,0);
+//      Serial.print(",");
+//      Serial.println(1000.0 * yUser,0);
+//      Serial.print(",");
+//      Serial.print(forceX,0);
+//      Serial.print(",");
+//      Serial.print(forceY,0);
+//      Serial.println(); 
+//      Serial.print(" "); 
 //      Serial.print(xh,5);
 //      Serial.print(",");
 //      Serial.println(yh,5);
-  //    
+      
     
 }//#endif //ENABLE_MASS_SPRING_DAMP  
  

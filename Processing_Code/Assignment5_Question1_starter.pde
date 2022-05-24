@@ -22,97 +22,130 @@ float inByte = 0;
 float lastByte = 0;
 
 // self initialized variables
-String rxString;
+//String rxString;
 String[] rxArray;
 int idx1;
-float newX1;
+float newX1; // x and y are flipped in the serial
 float newY1;
 int idx2;
 float newX2;
 float newY2;
 
 // constant values for graphics
-float xMin = 0.01;
-float xMax = 0.04;
-float yMin = -0.02;
-float yMax = 0.02;
-float xMapMin = 0;
-float xMapMax = 200;
-float yMapMin = 0;
-float yMapMax = 200;
-float spaceBuffer = 10;
+float buffer = 100;
+float xMin = 0;
+float xMax = 0.085;
+float yMin = 0;
+float yMax = 0.075;
+float xMapMin; // defines region for actual movement in display
+float xMapMax;
+float yMapMin;
+float yMapMax;
+float clayWidth = 0.060; //initial width of the clay (in real world)
+float clayMapWidth;
 
 // array to store point positions
-int numPoints = 4;
+int numPoints = 5;
 float[][] points;
 // handle coordinates
 float rawXh;
 float rawYh;
-float xh;
-float yh;
+float xh = 0;
+float yh = 0;
 
 void setup () {
   // set the window size:
-  size(600, 400);        
+  //size(600, 400);
+  fullScreen();
+  // set region for actual movement in display
+  xMapMin = width/2; 
+  xMapMax = width/2+400;
+  yMapMin = buffer;
+  yMapMax = height-buffer;
 
   // initialize points
   points = new float[numPoints][2];
-  // populate points
+  // map clay block width
+  clayMapWidth = map(clayWidth, xMin, xMax, xMapMin, xMapMax);
+  // initialize point positions
   for (int i = 0; i < numPoints; i += 1){
-    points[i][0] = width - 200;
-    points[i][1] = (i+1) * height/(numPoints+1);
+    points[i][0] = clayMapWidth;
+    //points[i][1] = (i+1) * height/(numPoints+1);
+    points[i][1] = i * (yMapMax-yMapMin)/(numPoints-1) + yMapMin;
   }
 
   // List all the available serial ports
   println(Serial.list());
   // Check the listed serial ports in your machine
-  // and use the correct index number in Serial.list()[].
-  myPort = new Serial(this, Serial.list()[9], 38400);  //make sure baud rate matches Arduino
-
+  // and use the correct index number in Serial.list()[  ].
+  myPort = new Serial(this, Serial.list()[0], 38400);//make sure baud rate matches Arduino
+  
   // A serialEvent() is generated when a newline character is received :
   myPort.bufferUntil('\n');
-  background(0);      // set inital background:
+  //background(0);      // set inital background:
 }
 
 void draw () {
   // everything happens in the serialEvent()
-  background(0);
-  stroke(127,34,255);     //stroke color
-  strokeWeight(4);        //stroke width
+  background(#E5D3B3);
+  stroke(#432616);     //stroke color
+  strokeWeight(2);        //stroke width
   
+  // draw range for x and y
+  rect(xMapMin, yMapMin, xMapMax-xMapMin, yMapMax-yMapMin);
+    
   // draw center line
-  line(300, 0, 300, 400);
+  line(xMapMin, 0, xMapMin, height);
   // draw handle position
   ellipse(xh, yh, 30, 30);
   // draw points for pottery
   for (int i = 0; i < numPoints; i += 1) {
-    stroke(200);
+    strokeWeight(6);
     point(points[i][0], points[i][1]);
+    //if (i==0 || i==numPoints-1){
+    //  line(xMapMin-points[i][0], yMapMin+points[i][1], xMapMin+points[i][0], yMapMin+points[i][1]);
+    //}
+    //else {
+    //  line(xMapMin+points[i-1][0], yMapMin+points[i-1][1], xMapMin+points[i][0], yMapMin+points[i][1]);
+    //  line(xMapMin-points[i-1][0], yMapMin+points[i-1][1], xMapMin-points[i][0], yMapMin+points[i][1]);
+    //}
   }
 }
 
 void serialEvent (Serial myPort) {
   // read input string
-  rxString = myPort.readStringUntil('\n');
+  String rxString = myPort.readStringUntil('\n');
+  //println("rxString", rxString);
   // process received data
   if (rxString != null){
     // split into array of strings
     rxArray = split(rxString, ',');
     // convert values to ints/floats and update values
-    idx1 = Integer.parseInt(rxArray[0]);
-    newX1 = float(rxArray[1]);
-    newY1 = float(rxArray[2]);
-    idx2 = Integer.parseInt(rxArray[3]);
-    newX2 = float(rxArray[4]);
-    newY2 = float(rxArray[5]);
-    rawXh = float(rxArray[6]);
+    idx1 = int(rxArray[0].trim());
+    newX1 = float(rxArray[1].trim());
+    newY1 = float(rxArray[2].trim());
+    idx2 = int(rxArray[3].trim());
+    newX2 = float(rxArray[4].trim());
+    newY2 = float(rxArray[5].trim());
+    rawXh = float(rxArray[6].trim());
     rawYh = float(rxArray[7]);
-    // map and update values
-    xh = map(rawXh, xMin, xMax, xMapMin, xMapMax);  // x handle position
-    yh = map(rawYh, yMin, yMax, yMapMin, yMapMax);  // y handle position
-    points[idx1][0] = map(newX1, xMin, xMax, xMapMin, xMapMax-spaceBuffer);  // first point x, TODO: check if mapping correct
-    //points[idx1][1] = map(newY1, yMin, yMax, yMapMin, yMapMax);  // first point y
-    points[idx2][0] = map(newX2, xMin, xMax, xMapMin, xMapMax-spaceBuffer);  // first point x
-    //points[idx2][1] = map(newY2, yMin, yMax, yMapMin, yMapMax);  // first point y
+    
+    println("xUser", rawXh*1000, "yUser", rawYh*1000);
+    if (idx1 == 327){
+      for (int i = 0; i < numPoints; i += 1){
+        points[i][0] = clayMapWidth;
+        //points[i][1] = (i+1) * height/(numPoints+1);
+        points[i][1] = i * (yMapMax-yMapMin)/(numPoints-1) + yMapMin;
+      }
+    }
+    else{
+      // map and update values
+      xh = map(rawXh, xMin, xMax, xMapMin, xMapMax);  // x handle position
+      yh = map(rawYh, yMin, yMax, yMapMax, yMapMin);  // y handle position
+      points[numPoints-idx1-1][0] = map(newX1, xMin, xMax, xMapMin, xMapMax);  // first point x, mapping to numPoints-idx-1 to start from top
+      //points[idx1][1] = map(newY1, yMin, yMax, yMapMin, yMapMax);  // first point y
+      points[numPoints-idx2-1][0] = map(newX2, xMin, xMax, xMapMin, xMapMax);  // second point x
+      //points[idx2][1] = map(newY2, yMin, yMax, yMapMin, yMapMax);  // second point y
+    }
   }
 }
