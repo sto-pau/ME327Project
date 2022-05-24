@@ -514,9 +514,11 @@ if (ENABLE_MASS_SPRING_DAMP == true){
   
     //force at handle, if no contact found userForceMag will be 0 
     //force applied to the User should be perpendicular to the line
-    //double forceX = - userForceMag * unitDirectionY; //need multiply by negative unitDirectionY weight to have the user direction point OUT of the clay
-    //double forceY = userForceMag * unitDirectionX;
-   
+    double forceClayFrameX = - userForceMag * unitDirectionY; //need multiply by negative unitDirectionY weight to have the user direction point OUT of the clay
+    double forceClayFrameY = userForceMag * unitDirectionX;
+
+    forceX = -forceClayFrameX;
+    forceY = -forceClayFrameY;
    ///****Calculate total force on clay****///
    
       UpdateClaySpringForce(&claySpringForce[0], &ymass[0]); //spring force
@@ -574,20 +576,20 @@ if (ENABLE_MASS_SPRING_DAMP == true){
   //    Serial.print(yUser,6);
   //    Serial.println(); 
   
-//      SendArrayOverSerial(xmass);
-//      SendArrayOverSerial(ymass);
-//      Serial.print(1000.0 * xUser,0);
-//      Serial.print(",");
-//      Serial.print(1000.0 * yUser,0);
-//      Serial.print(",");
-//      Serial.print(forceX,0);
-//      Serial.print(",");
-//      Serial.print(forceY,0);
-//      Serial.println(); 
+      SendArrayOverSerial(xmass);
+      SendArrayOverSerial(ymass);
+      Serial.print(1000.0 * xUser,0);
+      Serial.print(",");
+      Serial.print(1000.0 * yUser,0);
+      Serial.print(",");
+      Serial.print(forceX,0);
+      Serial.print(",");
+      Serial.print(forceY,0);
+      Serial.println(); 
   //    Serial.print(" "); 
-  //    Serial.print(xh,5);
-  //    Serial.print(",");
-  //    Serial.print(yh,5);
+//      Serial.print(xh,5);
+//      Serial.print(",");
+//      Serial.println(yh,5);
   //    
     
 }//#endif //ENABLE_MASS_SPRING_DAMP  
@@ -603,13 +605,13 @@ if (ENABLE_MASS_SPRING_DAMP == true){
   //VIRTUAL OBJECT HERE
   // calculate forceX
   // calculate forceY
-  forceX = 0.0;
-  forceY = 0.0;
+  //forceX = 0.0;
+  //forceY = 0.0;
   // FORCE SIMULATION HERE
 //  TL = -1;
 //  TR = -1;
-  TL = d1x3*forceX + d1y3*forceY;
-  TR = d5x3*forceX + d5y3*forceY;
+  TL = (d1x3*forceX + d1y3*forceY) / 1000.0;
+  TR = (d5x3*forceX + d5y3*forceY) / 1000.0; 
 
   if (isnan(TL)){
     TL = 0;
@@ -673,6 +675,9 @@ if (ENABLE_MASS_SPRING_DAMP == true){
   outputL = (int)(dutyL * 255);  // convert duty cycle to output signal
   analogWrite(pwmPinL, outputL); // output the signal
   //STOP COMMENT OUT HERE
+
+  //ardprintf("d1x3: %f, d5x3: %f, d1y3: %f, d5y3: %f", d1x3, d5x3, d1y3, d5y3);
+  //ardprintf("force x,y: %f %f torque R,L: %f %f duty R,L: %f %f", forceX, forceY, TR, TL, dutyR, dutyL);
 }
 
 
