@@ -94,6 +94,7 @@ double dtheta5_prev2;
 // Force output variables
 double forceX = 0;           // force at the handle
 double forceY = 0;
+float forceMultiplier = 0.1; //multiple user felt forces
 
 double TR = 0;              // torque of the motor pulley
 double TL = 0;              // torque of the motor pulley
@@ -124,10 +125,11 @@ float claySpringForce[points] = {0.0};
 float clayDampForce[points] = {0.0};
 float clayTotalForce[points] = {0.0};
 
-float kUser = 100.0;
-float bClay = 1.5;
+float kUser = 1000.0;
+float bUser = 10;
+float bClay = 50;
 float kClay = 0.0;
-float massClay = 1.0;
+float massClay = 2.0;
 
 //change in position variables
 float velMass[points] = {0.0};
@@ -135,8 +137,9 @@ float accMass[points] = {0.0};
 float velMassPrev[points] =  {0.0};
 float accMassPrev[points] =  {0.0};
 
-//calculating loop time
+//loop time
 unsigned long mSStart = 0;
+
 // --------------------------------------------------------------
 // Setup function -- NO NEED TO EDIT
 // --------------------------------------------------------------
@@ -319,7 +322,6 @@ void loop()
   double P4y = a4 * sin(theta5);
 
 
-
   // calculate norms
   double P42_norm = sqrt((P2x - P4x) * (P2x - P4x) + (P2y - P4y) * (P2y - P4y));
   double P2h_norm = (a2 * a2 - a3 * a3 + P42_norm * P42_norm) / (2 * P42_norm);
@@ -395,9 +397,11 @@ void loop()
   //*** Assign a motor output force in Newtons ******************  
   //*************************************************************
 
-//for now, wait until in position before starting rendering
-if ( (millis()- mainLoopStart)/64 >= 1000*5){
+//for now, wait until in position before starting rendering //(millis()- mainLoopStart)/64 >= 1000*10
+if ( yh > 265 && ENABLE_MASS_SPRING_DAMP == false ){
   ENABLE_MASS_SPRING_DAMP = true;
+  //calculating loop time
+  mSStart = 0;
 }
 
 if (ENABLE_MASS_SPRING_DAMP == true){
@@ -491,6 +495,8 @@ if (ENABLE_MASS_SPRING_DAMP == true){
     //initialize userForce as all zeroes before proving contact was made
     float userForce[points] = {0.0};
     float userForceMag = 0.0; //if no contact found forceX and forceY should be 0
+    forceX = 0;
+    forceY = 0;
   
     if (yUser < yOnLineUser){ //if there is contact, set the adjacent clay userForce not to zero  
   
@@ -507,21 +513,22 @@ if (ENABLE_MASS_SPRING_DAMP == true){
 
         //ardprintf("d userForceMag userForce[clayIndexClosest] userForce[clayIndexNext] %f %f %f %f", d, userForceMag, userForce[clayIndexClosest], userForce[clayIndexNext]);
               
+         ///****Calculate force on the user****///
+  
+        //unit vector perpendicular to line components
+        float unitDirectionY = ( ymass[slopeHigherIndex] - ymass[slopeLowerIndex] ) / sqrt(xLineWeight*xLineWeight + yLineWeight*yLineWeight); 
+        float unitDirectionX = ( xmass[slopeHigherIndex] - xmass[slopeLowerIndex] ) / sqrt(xLineWeight*xLineWeight + yLineWeight*yLineWeight);
+      
+        //force at handle, if no contact found userForceMag will be 0 
+        //force applied to the User should be perpendicular to the line
+        double forceClayFrameX = - userForceMag * unitDirectionY; //need multiply by negative unitDirectionY weight to have the user direction point OUT of the clay
+        double forceClayFrameY = userForceMag * unitDirectionX;
+    
+        forceX = (-forceClayFrameX - bUser * dxh) * forceMultiplier;
+        forceY = (forceClayFrameY - bUser * dyh) * forceMultiplier;    
+    
     }  
-  
-   ///****Calculate force on the user****///
-  
-    //unit vector perpendicular to line components
-    float unitDirectionY = ( ymass[slopeHigherIndex] - ymass[slopeLowerIndex] ) / sqrt(xLineWeight*xLineWeight + yLineWeight*yLineWeight); 
-    float unitDirectionX = ( xmass[slopeHigherIndex] - xmass[slopeLowerIndex] ) / sqrt(xLineWeight*xLineWeight + yLineWeight*yLineWeight);
-  
-    //force at handle, if no contact found userForceMag will be 0 
-    //force applied to the User should be perpendicular to the line
-    double forceClayFrameX = - userForceMag * unitDirectionY; //need multiply by negative unitDirectionY weight to have the user direction point OUT of the clay
-    double forceClayFrameY = userForceMag * unitDirectionX;
-
-    forceX = -forceClayFrameX;
-    forceY = forceClayFrameY;
+   
    ///****Calculate total force on clay****///
    
       UpdateClaySpringForce(&claySpringForce[0], &ymass[0]); //spring force
@@ -557,10 +564,14 @@ if (ENABLE_MASS_SPRING_DAMP == true){
   
       ///****Send User Information and Clay Information over Serial to Processing****///
   
-  //  if( doNotPrintEveryTime % (10) == 0 ){
-  //    Serial.println(rawPosHE);
-  //    //Serial.println(updatedPos);
-  // }
+        if( doNotPrintEveryTime % (10) == 0 ){
+          //Serial.println(rawPosHE);
+          //Serial.println(updatedPos);
+          //Serial.println(updatedPosHE);
+//          Serial.print(xUser,5);
+//          Serial.print(",");
+//          Serial.println(yUser,5);
+       }
 //    
 
       if ( !isnan(clayIndexClosest) && !isnan(clayIndexNext) && !isnan(ymass[clayIndexClosest]) && !isnan(xmass[clayIndexClosest])&& 
@@ -581,6 +592,10 @@ if (ENABLE_MASS_SPRING_DAMP == true){
         Serial.print(yUser,6);
         Serial.print(",");
         Serial.print(xUser,6);
+        Serial.print(",");
+        Serial.print(forceX,0);
+        Serial.print(",");
+        Serial.print(forceY,0);
         Serial.println(); 
         
       }
@@ -599,7 +614,7 @@ if (ENABLE_MASS_SPRING_DAMP == true){
 //      Serial.print(xh,5);
 //      Serial.print(",");
 //      Serial.println(yh,5);
-      
+//      
     
 }//#endif //ENABLE_MASS_SPRING_DAMP  
  
