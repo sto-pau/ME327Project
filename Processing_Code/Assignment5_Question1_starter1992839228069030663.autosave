@@ -1,0 +1,138 @@
+// Pro_Graph2.pde
+/*
+ Based on the Arduining example which is based on the Tom Igoe example.
+ Mofified by Cara Nunez 5/1/2019:
+  -A wider line was used. strokeWeight(4);
+  -Continuous line instead of vertical lines.
+  -Bigger Window size 600x400.
+-------------------------------------------------------------------------------
+This program takes ASCII-encoded strings
+from the serial port at 9600 baud and graphs them. It expects values in the
+range 0 to 1023, followed by a newline, or newline and carriage return
+
+
+*/
+
+import processing.serial.*;
+
+Serial myPort;        // The serial port
+
+//initialize variables
+float inByte = 0;
+float lastByte = 0;
+
+// self initialized variables
+//String rxString;
+String[] rxArray;
+int idx1;
+float newX1; // x and y are flipped in the serial
+float newY1;
+int idx2;
+float newX2;
+float newY2;
+
+// constant values for graphics
+float buffer = 100;
+float xMin = 0;
+float xMax = 0.085;
+float yMin = 0;
+float yMax = 0.065;
+float xMapMin; // defines region for actual movement in display
+float xMapMax;
+float yMapMin;
+float yMapMax;
+float clayWidth = 0.076; //initial width of the clay (in real world)
+float clayMapWidth;
+
+// array to store point positions
+int numPoints = 10;
+float[][] points;
+// handle coordinates
+float rawXh;
+float rawYh;
+float xh = 0;
+float yh = 0;
+
+void setup () {
+  // set the window size:
+  //size(600, 400);
+  fullScreen();
+  // set region for actual movement in display
+  xMapMin = width/2; 
+  xMapMax = width/2+400;
+  yMapMin = buffer;
+  yMapMax = height-buffer;
+
+  // initialize points
+  points = new float[numPoints][2];
+  // map clay block width
+  clayMapWidth = map(clayWidth, xMin, xMax, xMapMin, xMapMax);
+  // initialize point positions
+  for (int i = 0; i < numPoints; i += 1){
+    points[i][0] = clayMapWidth;
+    points[i][1] = (i+1) * height/(numPoints+1); 
+  }
+
+  // List all the available serial ports
+  println(Serial.list());
+  // Check the listed serial ports in your machine
+  // and use the correct index number in Serial.list()[].
+  //myPort = new Serial(this, Serial.list()[2], 9600);//make sure baud rate matches Arduino
+  
+  // A serialEvent() is generated when a newline character is received :
+  //myPort.bufferUntil('\n');
+  //background(0);      // set inital background:
+}
+
+void draw () {
+  // everything happens in the serialEvent()
+  background(#E5D3B3);
+  stroke(#432616);     //stroke color
+  strokeWeight(2);        //stroke width
+  
+  // draw range for x and y
+  rect(xMapMin, yMapMin, xMapMax-xMapMin, yMapMax-yMapMin);
+    
+  // draw center line
+  line(xMapMin, 0, xMapMin, height);
+  // draw handle position
+  ellipse(xh, yh, 30, 30);
+  // draw points for pottery
+  for (int i = 0; i < numPoints; i += 1) {
+    strokeWeight(6);
+    point(points[i][0], points[i][1]);
+    //if (i==0 || i==numPoints-1){
+    //  line(xMapMin-points[i][0], yMapMin+points[i][1], xMapMin+points[i][0], yMapMin+points[i][1]);
+    //}
+    //else {
+    //  line(xMapMin+points[i-1][0], yMapMin+points[i-1][1], xMapMin+points[i][0], yMapMin+points[i][1]);
+    //  line(xMapMin-points[i-1][0], yMapMin+points[i-1][1], xMapMin-points[i][0], yMapMin+points[i][1]);
+    //}
+  }
+}
+
+void serialEvent (Serial myPort) {
+  // read input string
+  String rxString = myPort.readStringUntil('\n');
+  // process received data
+  if (rxString != null){
+    // split into array of strings
+    rxArray = split(rxString, ',');
+    // convert values to ints/floats and update values
+    idx1 = int(rxArray[0].trim());
+    newX1 = float(rxArray[1].trim());
+    newY1 = float(rxArray[2].trim());
+    idx2 = int(rxArray[3].trim());
+    newX2 = float(rxArray[4].trim());
+    newY2 = float(rxArray[5].trim());
+    rawXh = float(rxArray[6].trim());
+    rawYh = float(rxArray[7].trim());
+    // map and update values
+    xh = map(rawXh, xMin, xMax, xMapMin, xMapMax);  // x handle position
+    yh = map(rawYh, yMin, yMax, yMapMax, yMapMin);  // y handle position, flipping y max and min positions to flip y axis
+    points[numPoints-idx1-1][0] = map(newX1, xMin, xMax, xMapMin, xMapMax);  // first point x, mapping to numPoints-idx-1 to index from top
+    //points[idx1][1] = map(newY1, yMin, yMax, yMapMin, yMapMax);  // first point y
+    points[numPoints-idx2-1][0] = map(newX2, xMin, xMax, xMapMin, xMapMax);  // second point x
+    //points[idx2][1] = map(newY2, yMin, yMax, yMapMin, yMapMax);  // second point y
+  }
+}
