@@ -7,7 +7,7 @@
 bool ENABLE_MASS_SPRING_DAMP = false;
 
 #define DEBUGGING 
-//#define TESTING 
+#define TESTING 
 
 //constants here
 float unitsDivisor = 1000.0; 
@@ -91,10 +91,23 @@ double dtheta5;
 double dtheta5_prev;
 double dtheta5_prev2;
 
+//angle calibration values
+//calibration MR sensor, th5, right
+double calPos5 = 518;
+double m5 = -0.01369;
+double b5 = 153.6599;
+double adjustedb5 = b5;
+
+//calibration HE sensor, th1, left
+double calPos1 = 16110;
+double m1 = 0.001532;
+double b1 = 14.1984;
+double adjustedb1 = b1;
+
 // Force output variables
 double forceX = 0;           // force at the handle
 double forceY = 0;
-float forceMultiplier = 0.1; //multiple user felt forces
+float forceMultiplier = 0.01; //multiple user felt forces
 
 double TR = 0;              // torque of the motor pulley
 double TL = 0;              // torque of the motor pulley
@@ -108,7 +121,7 @@ unsigned int outputL = 0;    // output command to the motor
 const float lengthWorkspace = 75.0 / unitsDivisor; //usable work length
 const int points = 5; //number of points to be used (needs to be constant to initialize arrays)
 const float lengthBetween = lengthWorkspace / (points - 1); //distance between points
-const float startingDepth = 60.0 / unitsDivisor; //thickness of clay block when starting
+const float startingDepth = 40.0 / unitsDivisor; //thickness of clay block when starting
 
 // Kinematics variables
 float yUser = 0.0;
@@ -125,8 +138,8 @@ float claySpringForce[points] = {0.0};
 float clayDampForce[points] = {0.0};
 float clayTotalForce[points] = {0.0};
 
-float kUser = 1000.0;
-float bUser = 10;
+float kUser = 100.0;
+float bUser = 2;
 float bClay = 50;
 float kClay = 0.0;
 float massClay = 2.0;
@@ -191,8 +204,14 @@ void setup()
   //  PrintArray(ymass);
   //  PrintArray(xmass);
 
+  //calibration MR sensor, th5, right
+  adjustedb5 = b5 - (updatedPos - calPos5) * m5;
+
+  //calibration HE sensor, th1, left
+  adjustedb1 = b1 - (updatedPos - calPos1) * m1;
+
   //to reset Processing visuals
-  Serial.println("327, 0, 0, 0, 0, 0, 0, 0");
+  Serial.println("327, 0, 0, 0, 0, 0, 0, 0, 0, 0");
   
 }// end of setup loop
 
@@ -286,8 +305,9 @@ void loop()
   //Serial.println((float)updatedPosHE,5);
   //Serial.println((float)updatedPos,5);
   // Step B.6: double ts = ?; // Compute the angle of the sector pulley (ts) in degrees based on updatedPos
-  double theta5 = (PI / 180) * (updatedPos * -0.0129 + 149.5);
-  double theta1 = (PI / 180) * (updatedPosHE * 0.001470 + 16.09);
+  
+  double theta5 = (PI / 180) * (updatedPos * m5 + adjustedb5);
+  double theta1 = (PI / 180) * (updatedPosHE * m1 + adjustedb1);
   //  Serial.print((float)theta5,5);
   //  Serial.print("\t");
   //  Serial.print((float)theta1,5);
@@ -310,10 +330,10 @@ void loop()
   theta5_prev2 = theta5_prev;
   theta5_prev = theta5;
 
-  //  Serial.print("\t");
-  //  Serial.print((float)dtheta5,5);
-  //  Serial.print("\t");
-  //  Serial.println((float)dtheta1,5);
+//    Serial.print("\t");
+//    Serial.print((float)theta5 * 180 / PI,5);
+//    Serial.print("\t");
+//    Serial.println((float)theta1 * 180 / PI,5);
 
   //calculate positions 2 and 4
   double P2x = a1 * cos(theta1);
@@ -397,8 +417,36 @@ void loop()
   //*** Assign a motor output force in Newtons ******************  
   //*************************************************************
 
+  //ardprintf("th5, th1: %f %f...xh, yh: %f %f...b5, ab5: %f %f...xU, yU: %f %f",theta5 * 180 / PI, theta1 * 180, xh, yh, b5, adjustedb5,b1, adjustedb1, xUser, yUser);      
+
+//      Serial.print(theta5 * 180 / PI,3);
+//      Serial.print(",");
+//      Serial.print(theta1 * 180 / PI,3);
+//      Serial.print(" ");
+//      Serial.print(xh,3);
+//      Serial.print(",");
+//      Serial.print(yh,3);
+//      Serial.print(" ");
+//      Serial.print(b5,3);
+//      Serial.print(",");
+//      Serial.print(adjustedb5,3);
+//      Serial.print(" ");
+//      Serial.print(b1,3);
+//      Serial.print(",");
+//      Serial.print(adjustedb1,3);
+//      Serial.print(" ");
+//      Serial.print(xUser,3);
+//      Serial.print(",");
+//      Serial.println(yUser,3);
+
+//      Serial.println(rawPosHE);
+//      Serial.print(updatedPos);
+//      Serial.print(",");
+//      Serial.print(updatedPosHE);
+//      Serial.print(" ");
+
 //for now, wait until in position before starting rendering //(millis()- mainLoopStart)/64 >= 1000*10
-if ( yh > 265 && ENABLE_MASS_SPRING_DAMP == false ){
+if ( yh > 245 && ENABLE_MASS_SPRING_DAMP == false ){
   ENABLE_MASS_SPRING_DAMP = true;
   //calculating loop time
   mSStart = 0;
@@ -524,10 +572,16 @@ if (ENABLE_MASS_SPRING_DAMP == true){
         double forceClayFrameX = - userForceMag * unitDirectionY; //need multiply by negative unitDirectionY weight to have the user direction point OUT of the clay
         double forceClayFrameY = userForceMag * unitDirectionX;
     
-        forceX = (-forceClayFrameX - bUser * dxh) * forceMultiplier;
-        forceY = (forceClayFrameY - bUser * dyh) * forceMultiplier;    
+        forceX = -forceClayFrameX; //add clay force
+        forceY = forceClayFrameY; //add clay force   
     
     }  
+
+        //total affects user force calc
+        forceX = (forceX - bUser * (dxh/1000)) * forceMultiplier; //add all other forces & multiply by force divider
+        forceY = (forceY - bUser * (dyh/1000)) * forceMultiplier; 
+
+#ifdef TESTING
    
    ///****Calculate total force on clay****///
    
@@ -560,8 +614,10 @@ if (ENABLE_MASS_SPRING_DAMP == true){
   
       //store acceleration and velocity from last time for use this time
       memcpy(accMassPrev, accMass, sizeof(accMassPrev));
-      memcpy(velMassPrev, velMass, sizeof(velMassPrev));   
-  
+      memcpy(velMassPrev, velMass, sizeof(velMassPrev)); 
+
+#endif
+    
       ///****Send User Information and Clay Information over Serial to Processing****///
   
         if( doNotPrintEveryTime % (10) == 0 ){
@@ -575,7 +631,7 @@ if (ENABLE_MASS_SPRING_DAMP == true){
 //    
 
       if ( !isnan(clayIndexClosest) && !isnan(clayIndexNext) && !isnan(ymass[clayIndexClosest]) && !isnan(xmass[clayIndexClosest])&& 
-      !isnan(ymass[clayIndexNext]) && !isnan(xmass[clayIndexNext]) && !isnan(yUser) && !isnan(xUser) ){   
+      !isnan(ymass[clayIndexNext]) && !isnan(xmass[clayIndexNext]) && !isnan(yUser) && !isnan(xUser) && !isnan(forceX) && !isnan(forceY) ){   
         
         Serial.print(clayIndexClosest);
         Serial.print(","); 
@@ -593,9 +649,9 @@ if (ENABLE_MASS_SPRING_DAMP == true){
         Serial.print(",");
         Serial.print(xUser,6);
         Serial.print(",");
-        Serial.print(forceX,0);
+        Serial.print(dutyR / 1000.0,6);
         Serial.print(",");
-        Serial.print(forceY,0);
+        Serial.print(dutyL / 1000.0,6);
         Serial.println(); 
         
       }
