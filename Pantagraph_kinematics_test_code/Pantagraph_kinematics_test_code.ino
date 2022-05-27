@@ -35,7 +35,7 @@ int rawDiff = 0;
 int lastRawDiff = 0;
 int rawOffset = 0;
 int lastRawOffset = 0;
-const int flipThresh = 700;  // threshold to determine whether or not a flip over the 180 degree mark occurred
+const int flipThresh = 575;  // threshold to determine whether or not a flip over the 180 degree mark occurred
 boolean flipped = false;
 double OFFSET = 980;
 double OFFSET_NEG = 15;
@@ -92,7 +92,12 @@ unsigned int outputR = 0;    // output command to the motor
 double dutyL = 0;            // duty cylce (between 0 and 255)
 unsigned int outputL = 0;    // output command to the motor
 
+//Position Calibration
+double b1 = 0;
+double m1 = 0.001470;
 
+double b5 = 0;
+double m5 = -0.0129;
 // --------------------------------------------------------------
 // Setup function -- NO NEED TO EDIT
 // --------------------------------------------------------------
@@ -128,7 +133,7 @@ void setup()
   analogWrite(pwmPinL, 0);     // set to not be spinning (0/255)
   digitalWrite(dirPinL, LOW);  // set direction
 
-  // Initialize position valiables
+  // Initialize position varliables
   lastLastRawPos = analogRead(sensorPosPin);
   lastRawPos = analogRead(sensorPosPin);
   flipNumber = 0;
@@ -137,6 +142,10 @@ void setup()
   angleSensor.getRawRotation(); // take reading in case first reading is spurious
   lastLastRawPosHE = angleSensor.getRawRotation(); //position from Hall Effect sensor
   lastRawPosHE = angleSensor.getRawRotation(); //position from Hall Effect sensor
+  flipNumberHE = 0;
+
+  b1 = 35.76 - lastRawPosHE*m1;
+  b5 = 144.5 - lastRawPos*m5;
 }
 
 
@@ -216,14 +225,15 @@ void loop()
   // Define kinematic parameters you may need
   //double rh = ?;   //[m]
   // Step B.1: print updatedPos via serial monitor
-  //Serial.println((float)updatedPosHE,5);
-  //Serial.println((float)updatedPos,5);
+//  Serial.print((float)updatedPosHE);
+//  Serial.print("\t");
+//  Serial.println((float)updatedPos);
   // Step B.6: double ts = ?; // Compute the angle of the sector pulley (ts) in degrees based on updatedPos
-  double theta5 = (PI / 180) * (updatedPos * -0.0129 + 149.5);
-  double theta1 = (PI / 180) * (updatedPosHE * 0.001470 + 16.09);
-  //  Serial.print((float)theta5,5);
-  //  Serial.print("\t");
-  //  Serial.print((float)theta1,5);
+  double theta5 = (PI / 180) * (updatedPos * m5 + b5);
+  double theta1 = (PI / 180) * (updatedPosHE * m1 + b1);
+    Serial.print((float)theta5*180/PI,5);
+    Serial.print("\t");
+    Serial.println((float)theta1*180/PI,5);
   // Step B.7: xh = ?;       // Compute the position of the handle (in meters) based on ts (in radians)
   // Step B.8: print xh via serial monitor
 
@@ -337,8 +347,8 @@ void loop()
   //VIRTUAL OBJECT HERE
   // calculate forceX
   // calculate forceY
-  forceX = 0;
-  forceY = 0.2;
+  forceX = 0.0001;
+  forceY = 0.0001;
   // FORCE SIMULATION HERE
 //  TL = -1;
 //  TR = -1;
@@ -353,9 +363,9 @@ void loop()
     TR = 0;
   }
   
-  Serial.print(TL,5);
-  Serial.print(" : ");
-  Serial.println(TR,5);
+//  Serial.print(TL,5);
+//  Serial.print(" : ");
+//  Serial.println(TR,5);
   // Step C.1: force = ?; // You can  generate a force by assigning this to a constant number (in Newtons) or use a haptic rendering / virtual environment
   // Step C.2: Tp = ?;    // Compute the require motor pulley torque (Tp) to generate that force using kinematics
 //  Serial.print(TR);
