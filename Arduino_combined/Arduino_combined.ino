@@ -7,7 +7,7 @@
 bool ENABLE_MASS_SPRING_DAMP = false;
 
 #define DEBUGGING 
-#define TESTING 
+//#define TESTING 
 
 //constants here
 float unitsDivisor = 1000.0; 
@@ -107,7 +107,7 @@ double adjustedb1 = b1;
 // Force output variables
 double forceX = 0;           // force at the handle
 double forceY = 0;
-float forceMultiplier = 0.01; //multiple user felt forces
+float forceMultiplier = 0.03; //multiple user felt forces
 
 double TR = 0;              // torque of the motor pulley
 double TL = 0;              // torque of the motor pulley
@@ -119,7 +119,7 @@ unsigned int outputL = 0;    // output command to the motor
 
 //workspace setup
 const float lengthWorkspace = 75.0 / unitsDivisor; //usable work length
-const int points = 5; //number of points to be used (needs to be constant to initialize arrays)
+const int points = 2; //number of points to be used (needs to be constant to initialize arrays)
 const float lengthBetween = lengthWorkspace / (points - 1); //distance between points
 const float startingDepth = 40.0 / unitsDivisor; //thickness of clay block when starting
 
@@ -199,6 +199,7 @@ void setup()
 
   //setup virtual enviroment
   SetAllElements(&ymass[0],startingDepth);
+  ymass[0] = 0;
   InitializeXmass(&xmass[0]);
   //  Serial.println("Starting Arrays ymass xmass");
   //  PrintArray(ymass);
