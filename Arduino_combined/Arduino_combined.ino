@@ -470,6 +470,10 @@ if (ENABLE_MASS_SPRING_DAMP == true){
     else if (xUser >= xmass[points - 1]){
         xUser = xmass[points - 1];
     }   
+
+    if (yUser < 0){
+      yUser = 0;
+    }
   
     ///****Collision Detection Setup****///
     
@@ -535,8 +539,8 @@ if (ENABLE_MASS_SPRING_DAMP == true){
         float d = abs ( xLineWeight * xUser + yLineWeight * yUser  + lineConstant ) / sqrt(xLineWeight*xLineWeight + yLineWeight*yLineWeight); //penetration distance
 
         //ardprintf("d xLineWeight yLineWeight lineConstant %f %d %d %d", d, xLineWeight, yLineWeight, lineConstant);
-        
-        userForceMag = kUser * d; 
+                     
+        userForceMag = kUser * (yOnLineUser / startingDepth) * d; 
         
         userForce[clayIndexClosest] = -userForceMag * abs( ( xUser - xmass[clayIndexNext] ) / lengthBetween ); //need to add negative such that clay is being pushed inwards
         userForce[clayIndexNext] = -userForceMag * abs( ( xUser - xmass[clayIndexClosest] ) / lengthBetween ); //see above
@@ -605,7 +609,7 @@ if (ENABLE_MASS_SPRING_DAMP == true){
       //Serial.println(milliLoopseconds,6);
   
       IntegratePrevious(velMass,accMass,accMassPrev, loopTime); //integrate for velocity
-      IntegratePrevious(ymass,velMass,velMassPrev, loopTime); //integrate for position  
+      IntegrateYClayPrevious(ymass,velMass,velMassPrev, loopTime); //integrate for position  
   
       //store acceleration and velocity from last time for use this time
       memcpy(accMassPrev, accMass, sizeof(accMassPrev));
@@ -857,6 +861,19 @@ void IntegratePrevious(float velMass[], float accMass[], float accMassPrev[], fl
   
   for (int index = 0; index < points; index++){    
     velMass[index] = velMass[index] + ( 0.5 * (accMassPrev[index] + accMass[index]) * (loopTime) ); //NOTE loop time estimation taken from arduino starter code 0.001;           
+  } 
+   
+ return;
+ 
+}
+
+//solve for a yposition by integrating velocity
+void IntegrateYClayPrevious(float ymass[], float velMass[], float velMassPrev[], float loopTime){
+  //for position integration yMass, velMass, velMassPrev
+  
+  for (int index = 0; index < points; index++){    
+    ymass[index] = ymass[index] + ( 0.5 * (velMassPrev[index] + velMass[index]) * (loopTime) ); //NOTE loop time estimation taken from arduino starter code 0.001;           
+    if (ymass[index] < 0){ymass[index] = 0;}
   } 
    
  return;
