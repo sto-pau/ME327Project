@@ -45,7 +45,7 @@ float clayWidth = 0.040; //initial width of the clay (in real world)
 float clayMapWidth;
 
 // array to store point positions
-int numPoints = 4;
+int numPoints = 6;
 float[][] points;
 // handle coordinates
 float rawXh;
@@ -118,10 +118,10 @@ void draw () {
   //line(xMapMin, 0, xMapMin, height);
   
   // draw title
-  //textSize(height/5);
-  //fill(color2);
-  //textLeading(height*3/20);
-  //text("Virtual \nPottery \nMaking", width/25, height/5);
+  textSize(height/5);
+  fill(color2);
+  textLeading(height*3/20);
+  text("Virtual \nPottery \nMaking", width/25, height/5);
   
   // draw points and contour for pottery
   for (int i = 0; i < numPoints; i += 1) {
@@ -129,19 +129,19 @@ void draw () {
     stroke(color2);
     strokeWeight(6);
     point(points[i][0], points[i][1]);
-    //// curves for displaying volume
-    //stroke(color2);
-    //strokeWeight(4);
-    //noFill();
-    //ellipse(width/2, points[i][1], 2*points[i][0]-width, curvature);
-    //// lines along side & and cover volume ellipse
-    //if (i>=1){ 
-    //  line(points[i-1][0], points[i-1][1], points[i][0], points[i][1]);
-    //  line(width-points[i-1][0], points[i-1][1], width-points[i][0], points[i][1]);
-    //  noStroke();
-    //  fill(color1);
-    //  rect(width-points[i][0]+3, points[i][1]-curvature/2-3, 2*points[i][0]-width-6, curvature/2);
-    //}
+    // curves for displaying volume
+    stroke(color2);
+    strokeWeight(4);
+    noFill();
+    ellipse(width/2, points[i][1], 2*points[i][0]-width, curvature);
+    // lines along side & and cover volume ellipse
+    if (i>=1){ 
+      line(points[i-1][0], points[i-1][1], points[i][0], points[i][1]);
+      line(width-points[i-1][0], points[i-1][1], width-points[i][0], points[i][1]);
+      noStroke();
+      fill(color1);
+      rect(width-points[i][0]+3, points[i][1]-curvature/2-3, 2*points[i][0]-width-6, curvature/2);
+    }
     // lines on top and bottom
     //if (i==0 || i==numPoints-1){ 
     //  line(width-points[i][0], points[i][1], points[i][0], points[i][1]);

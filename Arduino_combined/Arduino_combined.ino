@@ -119,7 +119,7 @@ unsigned int outputL = 0;    // output command to the motor
 
 //workspace setup
 const float lengthWorkspace = 75.0 / unitsDivisor; //usable work length
-const int points = 4; //number of points to be used (needs to be constant to initialize arrays)
+const int points = 6; //number of points to be used (needs to be constant to initialize arrays)
 const float lengthBetween = lengthWorkspace / (points - 1); //distance between points
 const float startingDepth = 40.0 / unitsDivisor; //thickness of clay block when starting
 
@@ -556,10 +556,7 @@ if (ENABLE_MASS_SPRING_DAMP == true){
     
         forceX = -forceClayFrameX; //add clay force
         forceY = forceClayFrameY; //add clay force   
-    
-    }  
-
-        //total affects user force calc
+         //total affects user force calc
         if (abs(xmass[clayIndexClosest] - xUser) < lengthBetween*0.05){
           forceX = 0;
         }
@@ -567,6 +564,17 @@ if (ENABLE_MASS_SPRING_DAMP == true){
           forceX = (forceX - bUser * (dxh/1000)) * forceMultiplier; //add all other forces & multiply by force divider
         }
         forceY = (forceY - bUser * (dyh/1000)) * forceMultiplier; 
+    
+    }  
+
+//        //total affects user force calc
+//        if (abs(xmass[clayIndexClosest] - xUser) < lengthBetween*0.05){
+//          forceX = 0;
+//        }
+//        else  {
+//          forceX = (forceX - bUser * (dxh/1000)) * forceMultiplier; //add all other forces & multiply by force divider
+//        }
+//        forceY = (forceY - bUser * (dyh/1000)) * forceMultiplier; 
 
 #ifdef TESTING
    
