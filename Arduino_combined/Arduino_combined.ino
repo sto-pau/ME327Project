@@ -463,25 +463,6 @@ if (ENABLE_MASS_SPRING_DAMP == true){
   
   #endif //DEBUGGING  
   
-  #ifdef TESTING
-  
-   // xUser = xmass[0] - 0.05; //below min
-    xUser = xmass[points - 1] - 0.005; //above max
-  
-    yUser = startingDepth;
-  
-    int loopingRate = 500;
-  
-    if (loopNumber <= loopingRate){
-  
-      xUser = xmass[points - 1] - 0.005;
-      yUser = ymass[points - 1] - (25.5 / unitsDivisor);
-      loopNumber++;
-      
-    }  
-    
-  #endif //TESTING
-  
     if (xUser <= xmass[0]){//handle case if xUser is = or surpasses min/max xMass
       xUser = xmass[0];
     }
@@ -645,7 +626,12 @@ if (ENABLE_MASS_SPRING_DAMP == true){
         Serial.print(",");
         Serial.print(xmass[clayIndexNext],6);
         Serial.print(",");
-        Serial.print(yUser,6);
+        if (yUser < yOnLineUser){
+          Serial.print(yOnLineUser,6);
+        }
+        else{
+          Serial.print(yUser,6);
+        }
         Serial.print(",");
         Serial.print(xUser,6);
         Serial.print(",");
