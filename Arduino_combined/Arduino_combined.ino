@@ -46,7 +46,7 @@ int rawDiff = 0;
 int lastRawDiff = 0;
 int rawOffset = 0;
 int lastRawOffset = 0;
-const int flipThresh = 700;  // threshold to determine whether or not a flip over the 180 degree mark occurred
+const int flipThresh = 575;  // threshold to determine whether or not a flip over the 180 degree mark occurred
 boolean flipped = false;
 double OFFSET = 980;
 double OFFSET_NEG = 15;
@@ -205,10 +205,10 @@ void setup()
   //  PrintArray(xmass);
 
   //calibration MR sensor, th5, right
-  adjustedb5 = b5 - (updatedPos - calPos5) * m5;
+  adjustedb5 = 144.5 - lastLastRawPos * m5;
 
   //calibration HE sensor, th1, left
-  adjustedb1 = b1 - (updatedPos - calPos1) * m1;
+  adjustedb1 = 35.76  - lastLastRawPosHE * m1;
 
   //to reset Processing visuals
   Serial.println("327, 0, 0, 0, 0, 0, 0, 0, 0, 0");
