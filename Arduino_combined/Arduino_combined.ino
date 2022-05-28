@@ -107,7 +107,9 @@ double adjustedb1 = b1;
 // Force output variables
 double forceX = 0;           // force at the handle
 double forceY = 0;
-float forceMultiplier = 0.03; //multiple user felt forces
+float forceMultiplier = 0.05; //multiple user felt forces
+double forceXprev = 0;           // previous force at the handle
+double forceYprev = 0;
 
 double TR = 0;              // torque of the motor pulley
 double TL = 0;              // torque of the motor pulley
@@ -119,7 +121,7 @@ unsigned int outputL = 0;    // output command to the motor
 
 //workspace setup
 const float lengthWorkspace = 75.0 / unitsDivisor; //usable work length
-const int points = 6; //number of points to be used (needs to be constant to initialize arrays)
+const int points = 10; //number of points to be used (needs to be constant to initialize arrays)
 const float lengthBetween = lengthWorkspace / (points - 1); //distance between points
 const float startingDepth = 40.0 / unitsDivisor; //thickness of clay block when starting
 
@@ -139,7 +141,7 @@ float clayDampForce[points] = {0.0};
 float clayTotalForce[points] = {0.0};
 
 float kUser = 100.0;
-float bUser = 2;
+float bUser = 8;
 float bClay = 50;
 float kClay = 0.0;
 float massClay = 2.0;
@@ -558,18 +560,34 @@ if (ENABLE_MASS_SPRING_DAMP == true){
         double forceClayFrameX = - userForceMag * unitDirectionY; //need multiply by negative unitDirectionY weight to have the user direction point OUT of the clay
         double forceClayFrameY = userForceMag * unitDirectionX;
     
-        forceX = -forceClayFrameX; //add clay force
-        forceY = forceClayFrameY; //add clay force   
-         //total affects user force calc
-        if (abs(xmass[clayIndexClosest] - xUser) < lengthBetween*0.05){
-          forceX = 0;
-        }
-        else  {
-          forceX = (forceX - bUser * (dxh/1000)) * forceMultiplier; //add all other forces & multiply by force divider
-        }
-        forceY = (forceY - bUser * (dyh/1000)) * forceMultiplier; 
-    
-    }  
+        if (dyh <= 0){ //do not pull user in as they move out of the clay   
+                 
+          forceX = -forceClayFrameX; //add clay force
+          forceY = forceClayFrameY; //add clay force   
+           //total affects user force calc
+          
+            if (abs(xmass[clayIndexClosest] - xUser) < lengthBetween * 0.15){ //deadband in x to prevent sudden force discontinuities
+              forceX = 0;
+            }
+            else  {
+              forceX = (forceX - bUser * (dxh/1000)) * forceMultiplier; //add all other forces & multiply by force divider
+            }
+            forceY = (forceY - bUser * (dyh/1000)) * forceMultiplier; 
+          
+        }    
+    } 
+
+     //filter forces to smoothen corners
+     float percentSmooth = 0.9;
+     forceX = forceXprev * percentSmooth + forceX * (1 - percentSmooth);
+     forceY = forceYprev * percentSmooth + forceY * (1 - percentSmooth); 
+     forceXprev = forceX;
+     forceYprev = forceY;
+
+     //add randomness
+     forceX = forceXprev * percentSmooth + forceX * (1 - percentSmooth) + 0.175 * forceX * cos(2 * PI * random(0,100)/100.0);
+     forceY = forceYprev * percentSmooth + forceY * (1 - percentSmooth) + 0.175 * forceY * cos(2 * PI * random(0,100)/100.0);
+       
 
 //        //total affects user force calc
 //        if (abs(xmass[clayIndexClosest] - xUser) < lengthBetween*0.05){
@@ -609,7 +627,7 @@ if (ENABLE_MASS_SPRING_DAMP == true){
       //Serial.println(milliLoopseconds,6);
   
       IntegratePrevious(velMass,accMass,accMassPrev, loopTime); //integrate for velocity
-      IntegrateYClayPrevious(ymass,velMass,velMassPrev, loopTime); //integrate for position  
+      IntegrateYClayPrevious(ymass,velMass,velMassPrev, loopTime); //integrate for position, if position is < 0 set to 0 
   
       //store acceleration and velocity from last time for use this time
       memcpy(accMassPrev, accMass, sizeof(accMassPrev));
@@ -653,9 +671,11 @@ if (ENABLE_MASS_SPRING_DAMP == true){
         Serial.print(",");
         Serial.print(xUser,6);
         Serial.print(",");
-        Serial.print(dutyR / 1000.0,6);
+        float randNum = random(0,100)/100.0;
+        Serial.print(randNum,6);
         Serial.print(",");
-        Serial.print(dutyL / 1000.0,6);
+        float cosVal = cos(2 * PI * randNum);
+        Serial.print(cosVal,6);
         Serial.println(); 
         
       }
