@@ -7,7 +7,7 @@
 bool ENABLE_MASS_SPRING_DAMP = false;
 
 #define DEBUGGING 
-//#define TESTING 
+#define TESTING 
 
 //constants here
 float unitsDivisor = 1000.0; 
@@ -119,7 +119,7 @@ unsigned int outputL = 0;    // output command to the motor
 
 //workspace setup
 const float lengthWorkspace = 75.0 / unitsDivisor; //usable work length
-const int points = 2; //number of points to be used (needs to be constant to initialize arrays)
+const int points = 4; //number of points to be used (needs to be constant to initialize arrays)
 const float lengthBetween = lengthWorkspace / (points - 1); //distance between points
 const float startingDepth = 40.0 / unitsDivisor; //thickness of clay block when starting
 
@@ -199,7 +199,7 @@ void setup()
 
   //setup virtual enviroment
   SetAllElements(&ymass[0],startingDepth);
-  ymass[0] = 0;
+//  ymass[0] = 0;
   InitializeXmass(&xmass[0]);
   //  Serial.println("Starting Arrays ymass xmass");
   //  PrintArray(ymass);
@@ -560,7 +560,12 @@ if (ENABLE_MASS_SPRING_DAMP == true){
     }  
 
         //total affects user force calc
-        forceX = (forceX - bUser * (dxh/1000)) * forceMultiplier; //add all other forces & multiply by force divider
+        if (abs(xmass[clayIndexClosest] - xUser) < lengthBetween*0.05){
+          forceX = 0;
+        }
+        else  {
+          forceX = (forceX - bUser * (dxh/1000)) * forceMultiplier; //add all other forces & multiply by force divider
+        }
         forceY = (forceY - bUser * (dyh/1000)) * forceMultiplier; 
 
 #ifdef TESTING
