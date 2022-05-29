@@ -601,7 +601,7 @@ if (ENABLE_MASS_SPRING_DAMP == true){
 //          Serial.println(yUser,5);
 //       }
     
-      write to Processing needed information for visual display
+      //write to Processing needed information for visual display
       if ( !isnan(clayIndexClosest) && !isnan(clayIndexNext) && !isnan(ymass[clayIndexClosest]) && !isnan(xmass[clayIndexClosest])&& 
       !isnan(ymass[clayIndexNext]) && !isnan(xmass[clayIndexNext]) && !isnan(yUser) && !isnan(xUser) && !isnan(forceX) && !isnan(forceY) ){   
         

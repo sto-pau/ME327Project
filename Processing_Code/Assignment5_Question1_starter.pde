@@ -65,7 +65,7 @@ color color3 = #FFFDFA;
 
 // rotating arc parameters
 float AngleStart = 0;  // where outer ring starts
-float Speed = 10;       // how fast everything spins
+float Speed = 30;       // how fast everything spins
 float AngleBump = Speed*0.1;   // added rotation of each ring
 
 // other graphing setup
@@ -101,10 +101,10 @@ void setup () {
   println(Serial.list());
   // Check the listed serial ports in your machine
   // and use the correct index number in Serial.list()[  ].
-  //myPort = new Serial(this, Serial.list()[0], 38400);//make sure baud rate matches Arduino
+  myPort = new Serial(this, Serial.list()[0], 38400);//make sure baud rate matches Arduino
   
   // A serialEvent() is generated when a newline character is received :
-  //myPort.bufferUntil('\n');
+  myPort.bufferUntil('\n');
   background(color1);      // set inital background:
 }
 
@@ -134,7 +134,7 @@ void draw () {
   ellipse(width/2, height-buffer*2, width*2/3, curvature*3);
   noStroke();
   fill(color1);
-  rect(width-points[9][0]+2, points[9][1]-curvature/2-60, 2*points[9][0]-width-4, curvature+20); // cover arc when behind pottery
+  rect(width-points[8][0]+2, points[8][1]-curvature/2-60, 2*points[8][0]-width-4, curvature+80); // cover arc when behind pottery
   
   // draw points and contour for pottery
   for (int i = 0; i < numPoints; i += 1) {
