@@ -59,23 +59,28 @@ int opacity = 0;
 int direction = 1;
 
 // colors
-int color1 = #E5D3B3;
-int color2 = #432616;
-int color3 = #FFFDFA;
+color color1 = #E5D3B3;
+color color2 = #432616;
+color color3 = #FFFDFA;
+
+// rotating arc parameters
+float AngleStart = 0;  // where outer ring starts
+float Speed = 10;       // how fast everything spins
+float AngleBump = Speed*0.1;   // added rotation of each ring
 
 // other graphing setup
-int curvature = 25;
+int curvature = 50; // parameter for how much curvature the lines along the surface have
 
 void setup () {
   // set the window size:
-  size(600, 400);
-  //fullScreen();
+  //size(600, 400);
+  fullScreen();
   // set region for actual movement in display
-  buffer = height/8;
+  buffer = height/12;
   xMapMin = width/2; 
-  xMapMax = width/2+width/5;
+  xMapMax = width/2+width/3;
   yMapMin = buffer;
-  yMapMax = height-buffer;
+  yMapMax = height-buffer*2;
   
   // font setup
   font = createFont("TropicalAsianDemoRegular-11V0.ttf", 24);
@@ -96,19 +101,19 @@ void setup () {
   println(Serial.list());
   // Check the listed serial ports in your machine
   // and use the correct index number in Serial.list()[  ].
-  myPort = new Serial(this, Serial.list()[0], 38400);//make sure baud rate matches Arduino
+  //myPort = new Serial(this, Serial.list()[0], 38400);//make sure baud rate matches Arduino
   
   // A serialEvent() is generated when a newline character is received :
-  myPort.bufferUntil('\n');
+  //myPort.bufferUntil('\n');
   background(color1);      // set inital background:
 }
 
 void draw () {
   background(color1);
   // draw range for x and y
-  strokeWeight(2);
-  noFill();
-  rect(xMapMin, yMapMin, xMapMax-xMapMin, yMapMax-yMapMin);
+  //strokeWeight(2);
+  //noFill();
+  //rect(xMapMin, yMapMin, xMapMax-xMapMin, yMapMax-yMapMin);
     
   // set initial stroke color and weight
   stroke(color2);     //stroke color
@@ -123,12 +128,20 @@ void draw () {
   textLeading(height*3/20);
   text("Virtual \nPottery \nMaking", width/25, height/5);
   
+  // draw rotating arc
+  noFill();
+  drawArc(width/2, height-buffer*2, width/2, curvature*2); // rotating arc
+  ellipse(width/2, height-buffer*2, width*2/3, curvature*3);
+  noStroke();
+  fill(color1);
+  rect(width-points[9][0]+2, points[9][1]-curvature/2-60, 2*points[9][0]-width-4, curvature+20); // cover arc when behind pottery
+  
   // draw points and contour for pottery
   for (int i = 0; i < numPoints; i += 1) {
     // draw points on the pottery
-    stroke(color2);
-    strokeWeight(6);
-    point(points[i][0], points[i][1]);
+    //stroke(color2);
+    //strokeWeight(6);
+    //point(points[i][0], points[i][1]); 
     // curves for displaying volume
     stroke(color2);
     strokeWeight(4);
@@ -139,7 +152,7 @@ void draw () {
       // rect for covering top of the ellipse
       noStroke();
       fill(color1);
-      rect(width-points[i][0]+2, points[i][1]-curvature/2-2, 2*points[i][0]-width-4, curvature/2);
+      rect(width-points[i][0]+2, points[i][1]-curvature/2-10, 2*points[i][0]-width-4, curvature/2+10);
       // lines along ledge
       stroke(color2);
       strokeWeight(4);
@@ -151,21 +164,7 @@ void draw () {
     //  line(width-points[i][0], points[i][1], points[i][0], points[i][1]);
     //}
   }
-  
-  // draw handle position without penetration
-  // calculate region where handle is
-  //float secHeight = (yMapMax-yMapMin)/(numPoints-1);
-  //print(secHeight);
-  //int ySection = floor((yh-buffer)/secHeight); // TODO: change yh-buffer to positve
-  //print(yh-buffer);
-  // calculate funtion of line segment
-  //float k = (points[numPoints-ySection][1]-points[numPoints-ySection-1][1])/(points[numPoints-ySection][0]-points[numPoints-ySection-1][0]);
-  //float b = points[numPoints-ySection][1]-k*points[numPoints-ySection][0];
-  //// set xh on line on line if handle position is to left of the line
-  //if ((k>=0 && yh>=k*xh+b) || (k<=0 && yh<=k*xh+b)){
-  //  xh = (yh-b)/k;
-  //}
-  // determine if handle position is penetrating 
+  // draw user position
   stroke(color2);
   strokeWeight(4);
   ellipse(xh, yh, 20, 20);
@@ -213,4 +212,22 @@ void serialEvent (Serial myPort) {
       //points[idx2][1] = map(newY2, yMin, yMax, yMapMin, yMapMax);  // second point y
     }
   }
+}
+
+/*
+Description:
+draw rotating arcs, rotating as time goes
+partially adapted from https://imaginary-institute.com/previews/preview-wheels.html
+Input:
+float centerX - center of arc, x
+float centerY - center of arc, y
+float xWidth - length of arc in x direction
+float yWidth - length of arc in y direction
+*/
+void drawArc(float centerX, float centerY, float xWidth, float yWidth){
+  stroke(color2);
+  strokeWeight(4);
+  float angle = AngleStart;  // starting angle
+  arc(centerX, centerY, xWidth, yWidth, angle, angle+PI/6);
+  AngleStart += Speed*.01;  // next frame, start here
 }
