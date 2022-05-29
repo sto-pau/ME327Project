@@ -45,7 +45,7 @@ float clayWidth = 0.040; //initial width of the clay (in real world)
 float clayMapWidth;
 
 // array to store point positions
-int numPoints = 6;
+int numPoints = 10;
 float[][] points;
 // handle coordinates
 float rawXh;
@@ -64,7 +64,7 @@ int color2 = #432616;
 int color3 = #FFFDFA;
 
 // other graphing setup
-int curvature = 50;
+int curvature = 25;
 
 void setup () {
   // set the window size:
@@ -96,7 +96,7 @@ void setup () {
   println(Serial.list());
   // Check the listed serial ports in your machine
   // and use the correct index number in Serial.list()[  ].
-  myPort = new Serial(this, Serial.list()[9], 38400);//make sure baud rate matches Arduino
+  myPort = new Serial(this, Serial.list()[0], 38400);//make sure baud rate matches Arduino
   
   // A serialEvent() is generated when a newline character is received :
   myPort.bufferUntil('\n');
@@ -136,11 +136,15 @@ void draw () {
     ellipse(width/2, points[i][1], 2*points[i][0]-width, curvature);
     // lines along side & and cover volume ellipse
     if (i>=1){ 
-      line(points[i-1][0], points[i-1][1], points[i][0], points[i][1]);
-      line(width-points[i-1][0], points[i-1][1], width-points[i][0], points[i][1]);
+      // rect for covering top of the ellipse
       noStroke();
       fill(color1);
-      rect(width-points[i][0]+3, points[i][1]-curvature/2-3, 2*points[i][0]-width-6, curvature/2);
+      rect(width-points[i][0]+2, points[i][1]-curvature/2-2, 2*points[i][0]-width-4, curvature/2);
+      // lines along ledge
+      stroke(color2);
+      strokeWeight(4);
+      line(points[i-1][0], points[i-1][1], points[i][0], points[i][1]);
+      line(width-points[i-1][0], points[i-1][1], width-points[i][0], points[i][1]);
     }
     // lines on top and bottom
     //if (i==0 || i==numPoints-1){ 
@@ -183,7 +187,12 @@ void serialEvent (Serial myPort) {
     newX2 = float(rxArray[4].trim());
     newY2 = float(rxArray[5].trim());
     rawXh = float(rxArray[6].trim());
-    rawYh = float(rxArray[7]); // TODO: check this if added extra elements
+    rawYh = float(rxArray[7].trim()); // TODO: check this if added extra elements
+    float forceX;
+    float forceY;
+    forceX = float(rxArray[8].trim());
+    forceY = float(rxArray[9]); // TODO: check this if added extra elements
+    
     
     println("xUser", rawXh*1000, "yUser", rawYh*1000);
     // reset points for reset message
