@@ -1,13 +1,13 @@
 //--------------------------------------------------------------------------
-// Code to test basic Hapkit functionality (sensing and force output)
-// Updated by Allison Okamura 1.17.2018
+// Virtual Clay Modeling
+// Mei Hao, Danny Pugh, Paula Stocco 2022
 //--------------------------------------------------------------------------
-// Parameters that define what environment to render
+// Parameters that define what environment to render, and assist in testing and debugging
 //#define ENABLE_MASS_SPRING_DAMP 
 bool ENABLE_MASS_SPRING_DAMP = false;
 
-#define DEBUGGING 
-#define TESTING 
+#define DEBUGGING //for removing rendering
+#define TESTING //for testing an angled wall
 
 //constants here
 float unitsDivisor = 1000.0; 
@@ -95,13 +95,13 @@ double dtheta5_prev2;
 //calibration MR sensor, th5, right
 double calPos5 = 518;
 double m5 = -0.01369;
-double b5 = 153.6599;
+double b5 = 144.5;
 double adjustedb5 = b5;
 
 //calibration HE sensor, th1, left
 double calPos1 = 16110;
 double m1 = 0.001532;
-double b1 = 14.1984;
+double b1 = 35.76;
 double adjustedb1 = b1;
 
 // Force output variables
@@ -208,10 +208,10 @@ void setup()
   //  PrintArray(xmass);
 
   //calibration MR sensor, th5, right
-  adjustedb5 = 144.5 - lastLastRawPos * m5;
+  adjustedb5 = b5 - lastLastRawPos * m5;
 
   //calibration HE sensor, th1, left
-  adjustedb1 = 35.76  - lastLastRawPosHE * m1;
+  adjustedb1 = b1  - lastLastRawPosHE * m1;
 
   //to reset Processing visuals
   Serial.println("327, 0, 0, 0, 0, 0, 0, 0, 0, 0");
@@ -300,22 +300,12 @@ void loop()
   //*************************************************************
   //*** Section 2. Compute position in meters *******************
   //*************************************************************
-
-    // ADD YOUR CODE HERE
-  // Define kinematic parameters you may need
-  //double rh = ?;   //[m]
-  // Step B.1: print updatedPos via serial monitor
-  //Serial.println((float)updatedPosHE,5);
-  //Serial.println((float)updatedPos,5);
-  // Step B.6: double ts = ?; // Compute the angle of the sector pulley (ts) in degrees based on updatedPos
   
   double theta5 = (PI / 180) * (updatedPos * m5 + adjustedb5);
   double theta1 = (PI / 180) * (updatedPosHE * m1 + adjustedb1);
   //  Serial.print((float)theta5,5);
   //  Serial.print("\t");
   //  Serial.print((float)theta1,5);
-  // Step B.7: xh = ?;       // Compute the position of the handle (in meters) based on ts (in radians)
-  // Step B.8: print xh via serial monitor
 
   // Calculate velocity with loop time estimation
   dtheta1 = (double)(theta1 - theta1_prev) / 0.001;
@@ -422,33 +412,8 @@ void loop()
 
   //ardprintf("th5, th1: %f %f...xh, yh: %f %f...b5, ab5: %f %f...xU, yU: %f %f",theta5 * 180 / PI, theta1 * 180, xh, yh, b5, adjustedb5,b1, adjustedb1, xUser, yUser);      
 
-//      Serial.print(theta5 * 180 / PI,3);
-//      Serial.print(",");
-//      Serial.print(theta1 * 180 / PI,3);
-//      Serial.print(" ");
-//      Serial.print(xh,3);
-//      Serial.print(",");
-//      Serial.print(yh,3);
-//      Serial.print(" ");
-//      Serial.print(b5,3);
-//      Serial.print(",");
-//      Serial.print(adjustedb5,3);
-//      Serial.print(" ");
-//      Serial.print(b1,3);
-//      Serial.print(",");
-//      Serial.print(adjustedb1,3);
-//      Serial.print(" ");
-//      Serial.print(xUser,3);
-//      Serial.print(",");
-//      Serial.println(yUser,3);
 
-//      Serial.println(rawPosHE);
-//      Serial.print(updatedPos);
-//      Serial.print(",");
-//      Serial.print(updatedPosHE);
-//      Serial.print(" ");
-
-//for now, wait until in position before starting rendering //(millis()- mainLoopStart)/64 >= 1000*10
+//do not render until user is in place
 if ( yh > 245 && ENABLE_MASS_SPRING_DAMP == false ){
   ENABLE_MASS_SPRING_DAMP = true;
   //calculating loop time
@@ -564,8 +529,8 @@ if (ENABLE_MASS_SPRING_DAMP == true){
                  
           forceX = -forceClayFrameX; //add clay force
           forceY = forceClayFrameY; //add clay force   
-           //total affects user force calc
-          
+           
+           //total affects user force calc          
             if (abs(xmass[clayIndexClosest] - xUser) < lengthBetween * 0.15){ //deadband in x to prevent sudden force discontinuities
               forceX = 0;
             }
@@ -578,16 +543,15 @@ if (ENABLE_MASS_SPRING_DAMP == true){
     } 
 
      //filter forces to smoothen corners
-     float percentSmooth = 0.9;
+     float percentSmooth = 0.95;
      forceX = forceXprev * percentSmooth + forceX * (1 - percentSmooth);
      forceY = forceYprev * percentSmooth + forceY * (1 - percentSmooth); 
-     forceXprev = forceX;
+     forceXprev = forceX; //set previous before randomness to not include randomness into integration next loop
      forceYprev = forceY;
 
-     //add randomness
-     forceX = forceXprev * percentSmooth + forceX * (1 - percentSmooth) + 0.175 * forceX * cos(2 * PI * random(0,100)/100.0);
-     forceY = forceYprev * percentSmooth + forceY * (1 - percentSmooth) + 0.175 * forceY * cos(2 * PI * random(0,100)/100.0);
-      
+     //add randomness to mimic 3D motion
+     forceX = forceX + 0.175 * forceX * cos(2 * PI * random(0,100)/100.0);
+     forceY = forceY + 0.175 * forceY * cos(2 * PI * random(0,100)/100.0);
 
 #ifdef TESTING
    
@@ -608,9 +572,9 @@ if (ENABLE_MASS_SPRING_DAMP == true){
       //integrate to find velocity and postion
   
       //change in time
-      float loopTime = (1.0 / 1000.0); //in SECONDS
+      float loopTime = (1.0 / 1000.0); //in SECONDS, based on approximate loop time
   
-      //calculated based on actual loop time (may need to use if becomes very slow)
+      //calculated based on actual loop time (may need to use if code running time slows down significantly)
       unsigned long mSTemp = millis();
       float milliLoopseconds = ( mSTemp - mSStart ) / (64.0); //divide by 64 to account for motor prescalar IN MILLISECONDS
       mSStart = mSTemp;
@@ -628,16 +592,16 @@ if (ENABLE_MASS_SPRING_DAMP == true){
     
       ///****Send User Information and Clay Information over Serial to Processing****///
   
-        if( doNotPrintEveryTime % (10) == 0 ){
-          //Serial.println(rawPosHE);
-          //Serial.println(updatedPos);
-          //Serial.println(updatedPosHE);
+//        if( doNotPrintEveryTime % (10) == 0 ){ // used to test sensor readings
+//          Serial.println(rawPosHE);
+//          Serial.println(updatedPos);
+//          Serial.println(updatedPosHE);
 //          Serial.print(xUser,5);
 //          Serial.print(",");
 //          Serial.println(yUser,5);
-       }
-//    
-
+//       }
+    
+      write to Processing needed information for visual display
       if ( !isnan(clayIndexClosest) && !isnan(clayIndexNext) && !isnan(ymass[clayIndexClosest]) && !isnan(xmass[clayIndexClosest])&& 
       !isnan(ymass[clayIndexNext]) && !isnan(xmass[clayIndexNext]) && !isnan(yUser) && !isnan(xUser) && !isnan(forceX) && !isnan(forceY) ){   
         
@@ -662,49 +626,27 @@ if (ENABLE_MASS_SPRING_DAMP == true){
         Serial.print(",");
         Serial.print(xUser,6);
         Serial.print(",");
-        float randNum = random(0,100)/100.0;
-        Serial.print(randNum,6);
+        Serial.print(forceX);
         Serial.print(",");
-        float cosVal = cos(2 * PI * randNum);
-        Serial.print(cosVal,6);
+        Serial.print(forceY);
         Serial.println(); 
         
       }
-  
+
+//      //Taken data with all of xmass and ymass at once
 //      SendArrayOverSerial(xmass);
 //      SendArrayOverSerial(ymass);
-//      Serial.print(1000.0 * xUser,0);
+//      Serial.print(xUser * 1000.0);
 //      Serial.print(",");
-//      Serial.println(1000.0 * yUser,0);
+//      Serial.print(yUser * 1000.0);
 //      Serial.print(",");
-//      Serial.print(forceX,0);
+//      Serial.print(forceX,6);
 //      Serial.print(",");
-//      Serial.print(forceY,0);
-//      Serial.println(); 
-//      Serial.print(" "); 
-//      Serial.print(xh,5);
-//      Serial.print(",");
-//      Serial.println(yh,5);
-//      
+//      Serial.println(forceY,6);     
     
 }//#endif //ENABLE_MASS_SPRING_DAMP  
  
-  // ADD YOUR CODE HERE
-  // Define kinematic parameters you may need
-  
-  // Step C.1: force = ?; // You can  generate a force by assigning this to a constant number (in Newtons) or use a haptic rendering / virtual environment
-  // Step C.2: Tp = ?;    // Compute the require motor pulley torque (Tp) to generate that force using kinematics
-
-  // ADD YOUR CODE HERE
-  // Define kinematic parameters you may need
-  //VIRTUAL OBJECT HERE
-  // calculate forceX
-  // calculate forceY
-  //forceX = 0.0;
-  //forceY = 0.0;
-  // FORCE SIMULATION HERE
-//  TL = -1;
-//  TR = -1;
+  // CALCULATE TORQUE HERE
   TL = (d1x3*forceX + d1y3*forceY) / 1000.0;
   TR = (d5x3*forceX + d5y3*forceY) / 1000.0; 
 
@@ -715,16 +657,6 @@ if (ENABLE_MASS_SPRING_DAMP == true){
   if (isnan(TR)){
     TR = 0;
   }
-  
-//  Serial.print(TL,5);
-//  Serial.print(" : ");
-//  Serial.println(TR,5);
-  
-  // Step C.1: force = ?; // You can  generate a force by assigning this to a constant number (in Newtons) or use a haptic rendering / virtual environment
-  // Step C.2: Tp = ?;    // Compute the require motor pulley torque (Tp) to generate that force using kinematics
-//  Serial.print(TR);
-//  Serial.print("\t");
-//  Serial.println(TL);
  
   //*************************************************************
   //*** Section 4. Force output (do not change) *****************
@@ -775,9 +707,6 @@ if (ENABLE_MASS_SPRING_DAMP == true){
   //ardprintf("force x,y: %f %f torque R,L: %f %f duty R,L: %f %f", forceX, forceY, TR, TL, dutyR, dutyL);
 }
 
-
-
-
 // --------------------------------------------------------------
 // Function to set PWM Freq -- DO NOT EDIT
 // --------------------------------------------------------------
@@ -812,7 +741,7 @@ void setPwmFrequency(int pin, int divisor) {
   }
 }
 
-///****Function****///
+///****Functions****///
 
 //special for intializing the x values of the clay
 void InitializeXmass(float xmass[]){
