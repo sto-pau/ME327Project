@@ -587,16 +587,7 @@ if (ENABLE_MASS_SPRING_DAMP == true){
      //add randomness
      forceX = forceXprev * percentSmooth + forceX * (1 - percentSmooth) + 0.175 * forceX * cos(2 * PI * random(0,100)/100.0);
      forceY = forceYprev * percentSmooth + forceY * (1 - percentSmooth) + 0.175 * forceY * cos(2 * PI * random(0,100)/100.0);
-       
-
-//        //total affects user force calc
-//        if (abs(xmass[clayIndexClosest] - xUser) < lengthBetween*0.05){
-//          forceX = 0;
-//        }
-//        else  {
-//          forceX = (forceX - bUser * (dxh/1000)) * forceMultiplier; //add all other forces & multiply by force divider
-//        }
-//        forceY = (forceY - bUser * (dyh/1000)) * forceMultiplier; 
+      
 
 #ifdef TESTING
    
